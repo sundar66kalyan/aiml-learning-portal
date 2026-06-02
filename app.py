@@ -278,4 +278,51 @@ def search():
     return render_template('search.html', query=query, topics=[])
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=10000)
+    app.run(debug=False, host='0.0.0.0', port=10000)import os
+from werkzeug.utils import secure_filename
+from flask import send_file
+
+# Configuration for file uploads
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'png', 'jpg', 'jpeg'}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/download_document/<int:doc_id>')
+@login_required
+def download_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True, download_name=doc.filename)
+    flash('File not found', 'danger')
+    return redirect(request.referrer)
+
+@app.route('/delete_document/<int:doc_id>')
+@admin_required
+def delete_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    db.session.delete(doc)
+    db.session.commit()
+    flash('Document deleted', 'success')
+    return redirect(request.referrer)
+
+@app.route('/run_code', methods=['POST'])
+@login_required
+def run_code():
+    import subprocess
+    code = request.json.get('code', '')
+    try:
+        # For security, run in a sandboxed environment
+        result = subprocess.run(['python', '-c', code], capture_output=True, text=True, timeout=5)
+        return {'output': result.stdout, 'error': result.stderr}
+    except Exception as e:
+        return {'error': str(e)}

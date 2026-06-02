@@ -32,8 +32,8 @@ class Topic(db.Model):
     definition = db.Column(db.Text)
     theory_notes = db.Column(db.Text)
     code_examples = db.Column(db.Text)
-    videos = db.Column(db.Text)
-    images_diagrams = db.Column(db.Text)
+    videos = db.Column(db.Text)  # JSON or comma-separated URLs
+    images = db.Column(db.Text)   # JSON or comma-separated image URLs
     github_links = db.Column(db.Text)
     project_links = db.Column(db.Text)
     references = db.Column(db.Text)
@@ -42,3 +42,13 @@ class Topic(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    documents = db.relationship('Document', backref='topic', lazy=True, cascade='all, delete-orphan')
+
+class Document(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
+    filename = db.Column(db.String(200), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_type = db.Column(db.String(50))  # pdf, doc, xls, csv, zip
+    file_size = db.Column(db.Integer)  # in bytes
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)

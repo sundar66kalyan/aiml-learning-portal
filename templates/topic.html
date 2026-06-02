@@ -1,76 +1,214 @@
 ﻿{% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between mb-4">
-    <h1>{{ topic.name }}
-        {% if topic.difficulty %}
-            <span class="badge bg-{% if topic.difficulty == "Beginner" %}success{% elif topic.difficulty == "Intermediate" %}warning{% else %}danger{% endif %} ms-2">{{ topic.difficulty }}</span>
-        {% endif %}
-        {% if topic.views %}
-            <small class="text-muted ms-2">👁️ {{ topic.views }} views</small>
-        {% endif %}
-    <div>
-        {% if current_user.is_authenticated and current_user.is_admin %}
-            <a href="{{ url_for('edit_topic', topic_id=topic.id) }}" class="btn btn-warning">Edit</a>
-        {% endif %}
-        <a href="{{ url_for('view_category', category_id=topic.category_id) }}" class="btn btn-secondary">Back to Category</a>
+<div class="container">
+    <div class="d-flex justify-content-between mb-4">
+        <h1>
+            {{ topic.name }}
+            {% if topic.difficulty %}
+                <span class="badge {% if topic.difficulty == 'Beginner' %}bg-success{% elif topic.difficulty == 'Intermediate' %}bg-warning{% else %}bg-danger{% endif %} ms-2">
+                    {{ topic.difficulty }}
+                </span>
+            {% endif %}
+            {% if topic.views %}
+                <small class="text-muted ms-2">👁️ {{ topic.views }} views</small>
+            {% endif %}
+        </h1>
+        <div>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+                <a href="{{ url_for('edit_topic', topic_id=topic.id) }}" class="btn btn-warning">✏️ Edit</a>
+            {% endif %}
+            <a href="{{ url_for('view_category', category_id=topic.category_id) }}" class="btn btn-secondary">← Back</a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Definition -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h4>📖 Definition</h4>
+                </div>
+                <div class="card-body">
+                    {{ topic.definition | safe }}
+                </div>
+            </div>
+            
+            <!-- Theory Notes -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h4>📝 Theory Notes</h4>
+                </div>
+                <div class="card-body">
+                    {{ topic.theory_notes | safe }}
+                </div>
+            </div>
+            
+            <!-- Code Examples with Run Button -->
+            {% if topic.code_examples %}
+            <div class="card mb-3">
+                <div class="card-header bg-dark text-white">
+                    <h4>💻 Code Examples</h4>
+                    <button class="btn btn-sm btn-success" onclick="runCodeExample()">▶️ Run Code</button>
+                </div>
+                <div class="card-body">
+                    <pre id="codeBlock" class="bg-light p-3 rounded" style="font-family: monospace; overflow-x: auto;">{{ topic.code_examples }}</pre>
+                    <div id="runOutput" style="display:none;">
+                        <hr>
+                        <h6>Output:</h6>
+                        <pre id="outputBlock" class="bg-dark text-white p-3 rounded"></pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Videos Section -->
+            {% if topic.videos %}
+            <div class="card mb-3">
+                <div class="card-header bg-danger text-white">
+                    <h4>🎥 Videos</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for video_url in topic.videos.split(',') if video_url.strip() %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <a href="{{ video_url.strip() }}" target="_blank" class="btn btn-danger w-100">
+                                        🎬 Watch Video {{ loop.index }}
+                                    </a>
+                                    <small class="text-muted d-block mt-2 text-center">{{ video_url.strip() }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Images Section -->
+            {% if topic.images %}
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h4>🖼️ Images & Diagrams</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for img_url in topic.images.split(',') if img_url.strip() %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <img src="{{ img_url.strip() }}" class="card-img-top" style="height:200px; object-fit:cover;" alt="Image">
+                                <div class="card-body">
+                                    <a href="{{ img_url.strip() }}" download class="btn btn-sm btn-primary">⬇️ Download</a>
+                                    <a href="{{ img_url.strip() }}" target="_blank" class="btn btn-sm btn-info">🔍 View Full</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- GitHub Links -->
+            {% if topic.github_links %}
+            <div class="card mb-3">
+                <div class="card-header bg-dark text-white">
+                    <h4>📦 GitHub Repositories</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for link in topic.github_links.split(',') if link.strip() %}
+                        <li class="list-group-item">
+                            <a href="{{ link.strip() }}" target="_blank" class="text-decoration-none">
+                                🔗 {{ link.strip() }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Project Links -->
+            {% if topic.project_links %}
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h4>🔗 Project Links</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for link in topic.project_links.split(',') if link.strip() %}
+                        <li class="list-group-item">
+                            <a href="{{ link.strip() }}" target="_blank" class="text-decoration-none">
+                                🌐 {{ link.strip() }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Documents Section -->
+            {% if topic.documents %}
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h4>📄 Documents & Resources</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for doc in topic.documents %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="h5">📎</span>
+                                <strong>{{ doc.filename }}</strong>
+                                <small class="text-muted">({{ (doc.file_size / 1024)|round(1) }} KB)</small>
+                            </div>
+                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-success btn-sm">
+                                ⬇️ Download
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- References -->
+            {% if topic.references %}
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h4>📚 References</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        {% for ref in topic.references.split(',') if ref.strip() %}
+                        <li>• {{ ref.strip() }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <p class="text-muted text-center mt-3">
+                Last updated: {{ topic.updated_at.strftime('%Y-%m-%d %H:%M') if topic.updated_at else topic.created_at.strftime('%Y-%m-%d %H:%M') }}
+            </p>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card mb-3">
-            <div class="card-header">
-                <h4>📖 Definition</h4>
-            </div>
-            <div class="card-body">
-                {{ topic.definition | safe }}
-            </div>
-        </div>
-        
-        <div class="card mb-3">
-            <div class="card-header">
-                <h4>📝 Theory Notes</h4>
-            </div>
-            <div class="card-body">
-                {{ topic.theory_notes | safe }}
-            </div>
-        </div>
-        
-        {% if topic.code_examples %}
-        <div class="card mb-3">
-            <div class="card-header">
-                <h4>💻 Code Examples</h4>
-            </div>
-            <div class="card-body">
-                {{ topic.code_examples | safe }}
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if topic.videos %}
-        <div class="card mb-3">
-            <div class="card-header">
-                <h4>🎥 Videos</h4>
-            </div>
-            <div class="card-body">
-                {{ topic.videos | safe }}
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if topic.github_links %}
-        <div class="card mb-3">
-            <div class="card-header">
-                <h4>📦 GitHub Links</h4>
-            </div>
-            <div class="card-body">
-                {{ topic.github_links | safe }}
-            </div>
-        </div>
-        {% endif %}
-        
-        <p class="text-muted">Last updated: {{ topic.updated_at.strftime('%Y-%m-%d %H:%M') if topic.updated_at else topic.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-    </div>
-</div>
+<script>
+function runCodeExample() {
+    const code = document.getElementById('codeBlock').innerText;
+    const outputDiv = document.getElementById('runOutput');
+    const outputBlock = document.getElementById('outputBlock');
+    
+    outputDiv.style.display = 'block';
+    
+    // For Python code - you can integrate with a backend API
+    // For now, display message
+    outputBlock.textContent = 'Python code execution requires backend setup.\n\nYour code:\n' + code;
+}
+</script>
 {% endblock %}
-
