@@ -2,40 +2,40 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header bg-warning">
-            <h2>✏️ Edit Topic: {{ topic.name }}</h2>
+        <div class="card-header bg-success text-white">
+            <h2>➕ Add New Topic to: {{ category.name }}</h2>
         </div>
         <div class="card-body">
             <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Topic Name</label>
-                    <input type="text" name="name" class="form-control" value="{{ topic.name }}" required>
+                    <label class="form-label fw-bold">Topic Name *</label>
+                    <input type="text" name="name" class="form-control" required>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Difficulty Level</label>
                     <select name="difficulty" class="form-select">
-                        <option value="Beginner" {% if topic.difficulty == 'Beginner' %}selected{% endif %}>🌱 Beginner</option>
-                        <option value="Intermediate" {% if topic.difficulty == 'Intermediate' %}selected{% endif %}>📘 Intermediate</option>
-                        <option value="Advanced" {% if topic.difficulty == 'Advanced' %}selected{% endif %}>🚀 Advanced</option>
+                        <option value="Beginner">🌱 Beginner</option>
+                        <option value="Intermediate">📘 Intermediate</option>
+                        <option value="Advanced">🚀 Advanced</option>
                     </select>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Definition</label>
-                    <textarea name="definition" class="form-control" rows="5">{{ topic.definition or '' }}</textarea>
+                    <textarea name="definition" class="form-control" rows="5"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Theory Notes</label>
-                    <textarea name="theory_notes" class="form-control" rows="10">{{ topic.theory_notes or '' }}</textarea>
+                    <textarea name="theory_notes" class="form-control" rows="10"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Code Examples</label>
-                    <textarea name="code_examples" id="codeInput" class="form-control font-monospace" rows="8">{{ topic.code_examples or '' }}</textarea>
+                    <textarea name="code_examples" id="codeInput" class="form-control font-monospace" rows="8"></textarea>
                     <div class="mt-2">
-                        <button type="button" class="btn btn-success btn-sm" onclick="runPythonCode()">▶️ Run Code</button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="runCode()">▶️ Run Code</button>
                         <button type="button" class="btn btn-info btn-sm" onclick="copyCode()">📋 Copy Code</button>
                     </div>
                     <div id="outputArea" class="mt-2" style="display:none;">
@@ -50,59 +50,40 @@
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">🎥 Videos (One per line)</label>
-                    <textarea name="videos" class="form-control" rows="3">{{ topic.videos or '' }}</textarea>
-                    <small class="text-muted">YouTube, Vimeo, or any video URL</small>
+                    <textarea name="videos" class="form-control" rows="3" placeholder="https://youtube.com/watch?v=..."></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">🖼️ Images (One URL per line)</label>
-                    <textarea name="images" id="imageUrls" class="form-control" rows="3">{{ topic.images or '' }}</textarea>
+                    <textarea name="images" id="imageUrls" class="form-control" rows="3"></textarea>
                     <button type="button" class="btn btn-primary btn-sm mt-2" onclick="previewImages()">👁️ Preview Images</button>
                     <div id="imagePreview" class="row mt-2"></div>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">📦 GitHub Links (One per line)</label>
-                    <textarea name="github_links" class="form-control" rows="3">{{ topic.github_links or '' }}</textarea>
+                    <textarea name="github_links" class="form-control" rows="3" placeholder="https://github.com/user/repo"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">🔗 Project Links (One per line)</label>
-                    <textarea name="project_links" class="form-control" rows="3">{{ topic.project_links or '' }}</textarea>
+                    <textarea name="project_links" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">📚 References (One per line)</label>
-                    <textarea name="references" class="form-control" rows="3">{{ topic.references or '' }}</textarea>
+                    <textarea name="references" class="form-control" rows="3"></textarea>
                 </div>
                 
-                <!-- Document Upload Section -->
                 <div class="mb-3">
                     <label class="form-label fw-bold">📄 Upload Documents</label>
-                    <input type="file" name="documents" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.ipynb">
-                    <small class="text-muted">Upload PDF, Word, Excel, CSV, ZIP, or Jupyter notebooks</small>
-                    
-                    {% if topic.documents %}
-                    <div class="mt-3">
-                        <strong>Uploaded Files:</strong>
-                        <ul class="list-group mt-2">
-                            {% for doc in topic.documents %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>📎 {{ doc.filename }} ({{ (doc.file_size / 1024)|round(1) }} KB)</span>
-                                <div>
-                                    <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-sm btn-success">⬇️ Download</a>
-                                    <a href="{{ url_for('delete_document', doc_id=doc.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">🗑️ Delete</a>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
+                    <input type="file" name="documents" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.ipynb,.py">
+                    <small class="text-muted">Upload PDF, Word, Excel, CSV, ZIP, or code files</small>
                 </div>
                 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">💾 Update Topic</button>
-                    <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-secondary">❌ Cancel</a>
+                    <button type="submit" class="btn btn-success">💾 Save Topic</button>
+                    <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">❌ Cancel</a>
                 </div>
             </form>
         </div>
@@ -110,14 +91,19 @@
 </div>
 
 <script>
-function runPythonCode() {
+function runCode() {
     const code = document.getElementById('codeInput').value;
     const outputDiv = document.getElementById('outputArea');
     const outputContent = document.getElementById('outputContent');
     
-    outputDiv.style.display = 'block';
+    if (!code.trim()) {
+        alert('Please enter some code first');
+        return;
+    }
     
-    // Send code to backend for execution
+    outputDiv.style.display = 'block';
+    outputContent.textContent = 'Running...';
+    
     fetch('/run_code', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -125,12 +111,7 @@ function runPythonCode() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.error) {
-            outputContent.textContent = 'Error: ' + data.error;
-        } else {
-            outputContent.textContent = data.output || '(No output)';
-            if (data.error) outputContent.textContent += '\n\nError:\n' + data.error;
-        }
+        outputContent.textContent = data.output || '(No output)';
     })
     .catch(error => {
         outputContent.textContent = 'Error: ' + error;
@@ -141,7 +122,7 @@ function copyCode() {
     const code = document.getElementById('codeInput');
     code.select();
     document.execCommand('copy');
-    alert('Code copied!');
+    alert('Code copied to clipboard!');
 }
 
 function previewImages() {
@@ -165,11 +146,6 @@ function previewImages() {
             preview.appendChild(col);
         }
     });
-}
-
-// Auto preview images on load
-if(document.getElementById('imageUrls').value) {
-    previewImages();
 }
 </script>
 {% endblock %}
