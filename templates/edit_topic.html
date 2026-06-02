@@ -2,178 +2,71 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header bg-warning">
-            <h2>✏️ Edit Topic: {{ topic.name }}</h2>
+        <div class="card-header bg-success text-white">
+            <h2>Add New Topic to: {{ category.name }}</h2>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Topic Name</label>
-                    <input type="text" name="name" class="form-control" value="{{ topic.name }}" required>
+                    <label class="form-label fw-bold">Topic Name *</label>
+                    <input type="text" name="name" class="form-control" required>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Difficulty Level</label>
                     <select name="difficulty" class="form-select">
-                        <option value="Beginner" {% if topic.difficulty == 'Beginner' %}selected{% endif %}>🌱 Beginner</option>
-                        <option value="Intermediate" {% if topic.difficulty == 'Intermediate' %}selected{% endif %}>📘 Intermediate</option>
-                        <option value="Advanced" {% if topic.difficulty == 'Advanced' %}selected{% endif %}>🚀 Advanced</option>
+                        <option value="Beginner">🌱 Beginner</option>
+                        <option value="Intermediate">📘 Intermediate</option>
+                        <option value="Advanced">🚀 Advanced</option>
                     </select>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Definition</label>
-                    <textarea name="definition" class="form-control" rows="5">{{ topic.definition or '' }}</textarea>
+                    <textarea name="definition" class="form-control" rows="5"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Theory Notes</label>
-                    <textarea name="theory_notes" class="form-control" rows="10">{{ topic.theory_notes or '' }}</textarea>
+                    <textarea name="theory_notes" class="form-control" rows="10"></textarea>
                 </div>
                 
-                <!-- Code Examples with Run Feature -->
                 <div class="mb-3">
                     <label class="form-label fw-bold">Code Examples</label>
-                    <textarea name="code_examples" id="codeExamples" class="form-control font-monospace" rows="8" style="font-family: 'Courier New', monospace;">{{ topic.code_examples or '' }}</textarea>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-success btn-sm" onclick="runCode()">▶️ Run Code</button>
-                        <button type="button" class="btn btn-info btn-sm" onclick="copyCode()">📋 Copy Code</button>
-                    </div>
-                    <div id="codeOutput" class="mt-2" style="display:none;">
-                        <div class="card">
-                            <div class="card-header bg-dark text-white">
-                                <strong>Output:</strong>
-                                <button type="button" class="btn-close btn-close-white float-end" onclick="hideOutput()"></button>
-                            </div>
-                            <div class="card-body">
-                                <pre id="outputContent" style="margin:0; white-space:pre-wrap;"></pre>
-                            </div>
-                        </div>
-                    </div>
+                    <textarea name="code_examples" class="form-control" rows="8"></textarea>
                 </div>
                 
-                <!-- Videos Section - Multiple URLs -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🎥 Videos (One URL per line)</label>
-                    <textarea name="videos" class="form-control" rows="4" placeholder="https://www.youtube.com/watch?v=xxxxx&#10;https://www.youtube.com/watch?v=yyyyy">{% if topic.videos %}{{ topic.videos.replace(',', '\n') }}{% endif %}</textarea>
-                    <small class="text-muted">Add one video URL per line. YouTube, Vimeo, or any video platform supported.</small>
+                    <label class="form-label fw-bold">Videos (One per line)</label>
+                    <textarea name="videos" class="form-control" rows="3" placeholder="https://youtube.com/watch?v=..."></textarea>
                 </div>
                 
-                <!-- Images Section - Multiple URLs with preview -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🖼️ Images (One URL per line)</label>
-                    <textarea name="images" id="imageUrls" class="form-control" rows="4" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.png">{% if topic.images %}{{ topic.images.replace(',', '\n') }}{% endif %}</textarea>
-                    <button type="button" class="btn btn-primary btn-sm mt-2" onclick="previewImages()">👁️ Preview Images</button>
-                    <div id="imagePreview" class="row mt-3"></div>
+                    <label class="form-label fw-bold">Images (One URL per line)</label>
+                    <textarea name="images" class="form-control" rows="3" placeholder="https://example.com/image.jpg"></textarea>
                 </div>
                 
-                <!-- GitHub Links -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">📦 GitHub Links (One per line)</label>
-                    <textarea name="github_links" class="form-control" rows="3" placeholder="https://github.com/user/repo1&#10;https://github.com/user/repo2">{% if topic.github_links %}{{ topic.github_links.replace(',', '\n') }}{% endif %}</textarea>
+                    <label class="form-label fw-bold">GitHub Links (One per line)</label>
+                    <textarea name="github_links" class="form-control" rows="3" placeholder="https://github.com/user/repo"></textarea>
                 </div>
                 
-                <!-- Project Links -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🔗 Project Links (One per line)</label>
-                    <textarea name="project_links" class="form-control" rows="3">{{ topic.project_links or '' }}</textarea>
+                    <label class="form-label fw-bold">Project Links (One per line)</label>
+                    <textarea name="project_links" class="form-control" rows="3"></textarea>
                 </div>
                 
-                <!-- References -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">📚 References (One per line)</label>
-                    <textarea name="references" class="form-control" rows="3">{{ topic.references or '' }}</textarea>
-                </div>
-                
-                <!-- Documents Upload Section -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">📄 Documents Upload</label>
-                    <input type="file" name="documents" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
-                    <small class="text-muted">Upload PDF, Word, Excel, CSV, or ZIP files. Multiple files allowed.</small>
-                    
-                    {% if topic.documents %}
-                    <div class="mt-2">
-                        <strong>Uploaded Documents:</strong>
-                        <ul class="list-group mt-2">
-                            {% for doc in topic.documents %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>
-                                    📎 {{ doc.filename }} ({{ (doc.file_size / 1024)|round(1) }} KB)
-                                </span>
-                                <div>
-                                    <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-sm btn-success">⬇️ Download</a>
-                                    <a href="{{ url_for('delete_document', doc_id=doc.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this document?')">🗑️ Delete</a>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
+                    <label class="form-label fw-bold">References (One per line)</label>
+                    <textarea name="references" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">💾 Update Topic</button>
-                    <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-secondary">❌ Cancel</a>
+                    <button type="submit" class="btn btn-success">💾 Save Topic</button>
+                    <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">❌ Cancel</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-// Run Python code (using Skulpt or simple eval for JavaScript)
-function runCode() {
-    const code = document.getElementById('codeExamples').value;
-    const outputDiv = document.getElementById('codeOutput');
-    const outputContent = document.getElementById('outputContent');
-    
-    outputDiv.style.display = 'block';
-    
-    // For Python code simulation (you can integrate with actual Python backend)
-    outputContent.textContent = 'Note: Python execution requires backend integration.\n\nYour code:\n' + code;
-    
-    // To actually run Python, you'd need a backend API endpoint
-    // For now, display the code
-}
-
-function copyCode() {
-    const code = document.getElementById('codeExamples');
-    code.select();
-    document.execCommand('copy');
-    alert('Code copied to clipboard!');
-}
-
-function hideOutput() {
-    document.getElementById('codeOutput').style.display = 'none';
-}
-
-function previewImages() {
-    const imageUrls = document.getElementById('imageUrls').value.split('\n');
-    const previewDiv = document.getElementById('imagePreview');
-    previewDiv.innerHTML = '';
-    
-    imageUrls.forEach(url => {
-        if(url.trim()) {
-            const col = document.createElement('div');
-            col.className = 'col-md-3 mb-2';
-            col.innerHTML = 
-                <div class="card">
-                    <img src="" class="card-img-top" style="height:150px; object-fit:cover;" onerror="this.src='https://via.placeholder.com/150?text=Invalid+URL'">
-                    <div class="card-body p-1">
-                        <a href="" target="_blank" class="btn btn-sm btn-primary w-100">View Full</a>
-                    </div>
-                </div>
-            ;
-            previewDiv.appendChild(col);
-        }
-    });
-}
-
-// Auto preview on load
-document.addEventListener('DOMContentLoaded', function() {
-    if(document.getElementById('imageUrls').value) {
-        previewImages();
-    }
-});
-</script>
 {% endblock %}

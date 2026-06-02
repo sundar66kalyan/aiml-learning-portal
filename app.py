@@ -1,21 +1,18 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+﻿# Back up current app.py
+Copy-Item app.py app.py.broken
+
+# Create new clean app.py
+@"
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Category, Topic, Document
+from models import db, User, Category, Topic
 from datetime import datetime
 import os
-import re
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learning_portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Upload configuration
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -51,9 +48,6 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
@@ -157,23 +151,28 @@ def add_category():
 def add_topic(category_id):
     category = Category.query.get_or_404(category_id)
     if request.method == 'POST':
-        topic = Topic(
-            name=request.form['name'],
-            definition=request.form.get('definition', ''),
-            theory_notes=request.form.get('theory_notes', ''),
-            code_examples=request.form.get('code_examples', ''),
-            videos=request.form.get('videos', ''),
-            images=request.form.get('images', ''),
-            github_links=request.form.get('github_links', ''),
-            project_links=request.form.get('project_links', ''),
-            references=request.form.get('references', ''),
-            difficulty=request.form.get('difficulty', 'Beginner'),
-            category_id=category_id
-        )
-        db.session.add(topic)
-        db.session.commit()
-        flash('Topic added!', 'success')
-        return redirect(url_for('view_category', category_id=category_id))
+        try:
+            topic = Topic(
+                name=request.form['name'],
+                definition=request.form.get('definition', ''),
+                theory_notes=request.form.get('theory_notes', ''),
+                code_examples=request.form.get('code_examples', ''),
+                videos=request.form.get('videos', ''),
+                images=request.form.get('images', ''),
+                github_links=request.form.get('github_links', ''),
+                project_links=request.form.get('project_links', ''),
+                references=request.form.get('references', ''),
+                difficulty=request.form.get('difficulty', 'Beginner'),
+                category_id=category_id
+            )
+            db.session.add(topic)
+            db.session.commit()
+            flash('Topic added successfully!', 'success')
+            return redirect(url_for('view_category', category_id=category_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('add_topic.html', category=category)
     return render_template('add_topic.html', category=category)
 
 @app.route('/edit_topic/<int:topic_id>', methods=['GET', 'POST'])
@@ -181,20 +180,25 @@ def add_topic(category_id):
 def edit_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     if request.method == 'POST':
-        topic.name = request.form['name']
-        topic.definition = request.form.get('definition', '')
-        topic.theory_notes = request.form.get('theory_notes', '')
-        topic.code_examples = request.form.get('code_examples', '')
-        topic.videos = request.form.get('videos', '')
-        topic.images = request.form.get('images', '')
-        topic.github_links = request.form.get('github_links', '')
-        topic.project_links = request.form.get('project_links', '')
-        topic.references = request.form.get('references', '')
-        topic.difficulty = request.form.get('difficulty', 'Beginner')
-        topic.updated_at = datetime.utcnow()
-        db.session.commit()
-        flash('Topic updated!', 'success')
-        return redirect(url_for('view_topic', topic_id=topic_id))
+        try:
+            topic.name = request.form['name']
+            topic.definition = request.form.get('definition', '')
+            topic.theory_notes = request.form.get('theory_notes', '')
+            topic.code_examples = request.form.get('code_examples', '')
+            topic.videos = request.form.get('videos', '')
+            topic.images = request.form.get('images', '')
+            topic.github_links = request.form.get('github_links', '')
+            topic.project_links = request.form.get('project_links', '')
+            topic.references = request.form.get('references', '')
+            topic.difficulty = request.form.get('difficulty', 'Beginner')
+            topic.updated_at = datetime.utcnow()
+            db.session.commit()
+            flash('Topic updated!', 'success')
+            return redirect(url_for('view_topic', topic_id=topic_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('edit_topic.html', topic=topic)
     return render_template('edit_topic.html', topic=topic)
 
 @app.route('/delete_topic/<int:topic_id>')
@@ -266,27 +270,8 @@ def search():
         ).all()
     return render_template('search.html', query=query, topics=topics)
 
-@app.route('/download/<int:doc_id>')
-@login_required
-def download_document(doc_id):
-    doc = Document.query.get_or_404(doc_id)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True, download_name=doc.filename)
-    flash('File not found', 'danger')
-    return redirect(request.referrer)
-
-@app.route('/delete_doc/<int:doc_id>')
-@admin_required
-def delete_document(doc_id):
-    doc = Document.query.get_or_404(doc_id)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-    db.session.delete(doc)
-    db.session.commit()
-    flash('Document deleted', 'success')
-    return redirect(request.referrer)
-
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
+"@ | Out-File -FilePath app.py -Encoding UTF8
+
+Write-Host "✓ Clean app.py created!" -ForegroundColor Green
