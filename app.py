@@ -1,9 +1,4 @@
-﻿# Back up current app.py
-Copy-Item app.py app.py.duplicate
-
-# Create clean app.py
-@'
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Category, Topic, Document
 from datetime import datetime
@@ -18,7 +13,6 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learning_portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Upload configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -62,7 +56,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ========== BASIC ROUTES ==========
 @app.route('/')
 def index():
     categories = Category.query.all()
@@ -80,7 +73,6 @@ def view_topic(topic_id):
     db.session.commit()
     return render_template('topic.html', topic=topic, current_user=current_user)
 
-# ========== AUTHENTICATION ==========
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -150,7 +142,6 @@ def change_password():
         flash('Password changed!', 'success')
     return redirect(url_for('profile'))
 
-# ========== CATEGORY MANAGEMENT ==========
 @app.route('/add_category', methods=['GET', 'POST'])
 @admin_required
 def add_category():
@@ -171,7 +162,6 @@ def delete_category(category_id):
     flash('Category deleted!', 'success')
     return redirect(url_for('index'))
 
-# ========== TOPIC MANAGEMENT (ONLY ONCE!) ==========
 @app.route('/add_topic/<int:category_id>', methods=['GET', 'POST'])
 @admin_required
 def add_topic(category_id):
@@ -274,7 +264,6 @@ def delete_topic(topic_id):
     flash('Topic deleted!', 'success')
     return redirect(url_for('view_category', category_id=category_id))
 
-# ========== CODE EXECUTION ==========
 @app.route('/run_code', methods=['POST'])
 @login_required
 def run_code():
@@ -297,7 +286,6 @@ def run_code():
     except Exception as e:
         return {'output': f'Error: {str(e)}'}
 
-# ========== DOCUMENT MANAGEMENT ==========
 @app.route('/download/<int:doc_id>')
 @login_required
 def download_document(doc_id):
@@ -320,7 +308,6 @@ def delete_document(doc_id):
     flash('Document deleted', 'success')
     return redirect(request.referrer)
 
-# ========== USER MANAGEMENT ==========
 @app.route('/admin/users')
 @admin_required
 def manage_users():
@@ -357,7 +344,6 @@ def delete_user(user_id):
         flash('User deleted', 'success')
     return redirect(url_for('manage_users'))
 
-# ========== SEARCH ==========
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
@@ -374,6 +360,3 @@ def search():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
-'@ | Out-File -FilePath app.py -Encoding UTF8
-
-Write-Host "✓ Clean app.py created with NO duplicate functions!" -ForegroundColor Green
