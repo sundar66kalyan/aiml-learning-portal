@@ -1,0 +1,37 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-light p-5 rounded mb-4">
+            <h1 class="display-4">Welcome to AI/ML Learning Portal</h1>
+            <p class="lead">Your comprehensive knowledge management system for Artificial Intelligence and Machine Learning</p>
+            <hr class="my-4">
+            <p>Created by <strong>Kalyanasundar</strong> - A complete solution for organizing ML/DL/NLP learning materials</p>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Learning Categories</h2>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+                <a href="{{ url_for('add_category') }}" class="btn btn-primary">+ Add New Category</a>
+            {% endif %}
+        </div>
+        
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <p class="card-text">{{ category.description[:100] if category.description else 'No description' }}</p>
+                        <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-primary">View Topics</a>
+                        {% if current_user.is_authenticated and current_user.is_admin %}
+                            <a href="{{ url_for('delete_category', category_id=category.id) }}" class="btn btn-danger" onclick="return confirm('Delete this category?')">Delete</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

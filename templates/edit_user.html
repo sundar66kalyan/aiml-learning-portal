@@ -1,0 +1,40 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Edit User: {{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" value="{{ user.username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="is_admin" class="form-check-input" value="true" {% if user.is_admin %}checked{% endif %}>
+                        <label class="form-check-label">Admin Privileges</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                    <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">Cancel</a>
+                </form>
+                
+                <hr>
+                <h5>Reset Password</h5>
+                <form method="POST" action="{{ url_for('admin_reset_password', user_id=user.id) }}">
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">Reset Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

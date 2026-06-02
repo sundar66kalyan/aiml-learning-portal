@@ -1,0 +1,73 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    {% if user.is_admin %}👑 {% endif %}
+                    {{ user.username }}'s Profile
+                </h3>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="40%">Username:</th>
+                        <td>{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>Email:</th>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Role:</th>
+                        <td>
+                            {% if user.is_admin %}
+                                <span class="badge bg-success">Administrator</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Regular User</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Member since:</th>
+                        <td>{{ user.created_at.strftime('%B %d, %Y at %H:%M') }}</td>
+                    </tr>
+                    <tr>
+                        <th>User ID:</th>
+                        <td>{{ user.id }}</td>
+                    </tr>
+                </table>
+                
+                {% if current_user.id == user.id %}
+                    <hr>
+                    <h4>🔐 Change Password</h4>
+                    <form method="POST" action="{{ url_for('change_password') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="new_password" class="form-control" required>
+                            <small class="text-muted">Minimum 6 characters</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </form>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+                    {% if current_user.is_admin and current_user.id != user.id %}
+                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-warning">Edit User</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
