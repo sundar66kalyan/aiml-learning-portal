@@ -1,44 +1,68 @@
 ﻿{% extends "base.html" %}
 {% block content %}
-<h1>Add Topic to {{ category.name }}</h1>
-<form method="POST">
-    <div class="mb-3">
-        <label class="form-label">Topic Name</label>
-        <input type="text" name="name" class="form-control" required>
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h2>Edit Topic: {{ topic.name }}</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Topic Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ topic.name }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Definition</label>
+                            <textarea name="definition" class="form-control" rows="5">{{ topic.definition if topic.definition else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Theory Notes</label>
+                            <textarea name="theory_notes" class="form-control" rows="10">{{ topic.theory_notes if topic.theory_notes else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Code Examples</label>
+                            <textarea name="code_examples" class="form-control" rows="8">{{ topic.code_examples if topic.code_examples else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Videos</label>
+                            <textarea name="videos" class="form-control" rows="3" placeholder="YouTube links, embedded code, etc.">{{ topic.videos if topic.videos else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Images/Diagrams</label>
+                            <textarea name="images_diagrams" class="form-control" rows="3" placeholder="Image URLs or markdown">{{ topic.images_diagrams if topic.images_diagrams else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">GitHub Links</label>
+                            <textarea name="github_links" class="form-control" rows="3" placeholder="Repository URLs">{{ topic.github_links if topic.github_links else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Project Links</label>
+                            <textarea name="project_links" class="form-control" rows="3" placeholder="Project demos, articles">{{ topic.project_links if topic.project_links else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">References</label>
+                            <textarea name="references" class="form-control" rows="3" placeholder="Books, papers, citations">{{ topic.references if topic.references else '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">💾 Update Topic</button>
+                            <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-secondary">❌ Cancel</a>
+                            <a href="{{ url_for('view_category', category_id=topic.category_id) }}" class="btn btn-info">📚 Back to Category</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label class="form-label">Definition</label>
-        <textarea name="definition" class="form-control" rows="5"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Theory Notes</label>
-        <textarea name="theory_notes" class="form-control" rows="10"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Code Examples</label>
-        <textarea name="code_examples" class="form-control" rows="8"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Videos (Embed YouTube/Vimeo links)</label>
-        <textarea name="videos" class="form-control" rows="3"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Images/Diagrams URLs</label>
-        <textarea name="images_diagrams" class="form-control" rows="3"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">GitHub Links</label>
-        <textarea name="github_links" class="form-control" rows="3"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Project Links</label>
-        <textarea name="project_links" class="form-control" rows="3"></textarea>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">References</label>
-        <textarea name="references" class="form-control" rows="3"></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">Cancel</a>
-</form>
+</div>
 {% endblock %}
