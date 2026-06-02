@@ -1,9 +1,4 @@
-﻿# Back up current app.py
-Copy-Item app.py app.py.broken
-
-# Create new clean app.py
-@"
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Category, Topic
 from datetime import datetime
@@ -272,6 +267,3 @@ def search():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
-"@ | Out-File -FilePath app.py -Encoding UTF8
-
-Write-Host "✓ Clean app.py created!" -ForegroundColor Green
