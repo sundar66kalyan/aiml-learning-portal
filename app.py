@@ -1,19 +1,26 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, flash
+﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Category, Topic
+from models import db, User, Category, Topic, Document
 from datetime import datetime
 import os
+import re
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learning_portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Upload configuration
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Please login to access this page'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -26,9 +33,8 @@ def create_admin():
         admin.set_password('admin123')
         db.session.add(admin)
         db.session.commit()
-        print("Admin user created! Username: admin, Password: admin123")
+        print("Admin created: admin/admin123")
 
-# Create tables when app starts
 with app.app_context():
     db.create_all()
     create_admin()
@@ -38,13 +44,16 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('Please login to access this page', 'danger')
+            flash('Please login', 'danger')
             return redirect(url_for('login'))
         if not current_user.is_admin:
-            flash('You need admin privileges', 'danger')
+            flash('Admin privileges required', 'danger')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
@@ -68,14 +77,12 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
+        user = User.query.filter_by(username=request.form['username']).first()
+        if user and user.check_password(request.form['password']):
             login_user(user)
-            flash('Logged in successfully!', 'success')
+            flash('Logged in!', 'success')
             return redirect(url_for('index'))
-        flash('Invalid username or password', 'danger')
+        flash('Invalid credentials', 'danger')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -88,31 +95,23 @@ def register():
         
         if password != confirm:
             flash('Passwords do not match', 'danger')
-            return render_template('register.html')
-        if len(password) < 6:
-            flash('Password must be at least 6 characters', 'danger')
-            return render_template('register.html')
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'danger')
-            return render_template('register.html')
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered', 'danger')
-            return render_template('register.html')
-        
-        is_admin = False
-        if current_user.is_authenticated and current_user.is_admin:
-            is_admin = request.form.get('is_admin') == 'true'
-        
-        new_user = User(username=username, email=email, is_admin=is_admin)
-        new_user.set_password(password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('User created successfully!', 'success')
-        
-        if current_user.is_authenticated and current_user.is_admin:
-            return redirect(url_for('manage_users'))
-        login_user(new_user)
-        return redirect(url_for('index'))
+        elif len(password) < 6:
+            flash('Password too short', 'danger')
+        elif User.query.filter_by(username=username).first():
+            flash('Username exists', 'danger')
+        elif User.query.filter_by(email=email).first():
+            flash('Email exists', 'danger')
+        else:
+            is_admin = current_user.is_authenticated and current_user.is_admin and request.form.get('is_admin') == 'true'
+            new_user = User(username=username, email=email, is_admin=is_admin)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User created!', 'success')
+            if current_user.is_authenticated and current_user.is_admin:
+                return redirect(url_for('manage_users'))
+            login_user(new_user)
+            return redirect(url_for('index'))
     return render_template('register.html')
 
 @app.route('/logout')
@@ -130,20 +129,16 @@ def profile():
 @app.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
-    current_pwd = request.form['current_password']
-    new_pwd = request.form['new_password']
-    confirm = request.form['confirm_password']
-    
-    if not current_user.check_password(current_pwd):
-        flash('Current password is incorrect', 'danger')
-    elif new_pwd != confirm:
-        flash('New passwords do not match', 'danger')
-    elif len(new_pwd) < 6:
-        flash('Password must be at least 6 characters', 'danger')
+    if not current_user.check_password(request.form['current_password']):
+        flash('Current password incorrect', 'danger')
+    elif request.form['new_password'] != request.form['confirm_password']:
+        flash('Passwords do not match', 'danger')
+    elif len(request.form['new_password']) < 6:
+        flash('Password too short', 'danger')
     else:
-        current_user.set_password(new_pwd)
+        current_user.set_password(request.form['new_password'])
         db.session.commit()
-        flash('Password changed successfully!', 'success')
+        flash('Password changed!', 'success')
     return redirect(url_for('profile'))
 
 @app.route('/add_category', methods=['GET', 'POST'])
@@ -168,7 +163,7 @@ def add_topic(category_id):
             theory_notes=request.form.get('theory_notes', ''),
             code_examples=request.form.get('code_examples', ''),
             videos=request.form.get('videos', ''),
-            images_diagrams=request.form.get('images_diagrams', ''),
+            images=request.form.get('images', ''),
             github_links=request.form.get('github_links', ''),
             project_links=request.form.get('project_links', ''),
             references=request.form.get('references', ''),
@@ -191,7 +186,7 @@ def edit_topic(topic_id):
         topic.theory_notes = request.form.get('theory_notes', '')
         topic.code_examples = request.form.get('code_examples', '')
         topic.videos = request.form.get('videos', '')
-        topic.images_diagrams = request.form.get('images_diagrams', '')
+        topic.images = request.form.get('images', '')
         topic.github_links = request.form.get('github_links', '')
         topic.project_links = request.form.get('project_links', '')
         topic.references = request.form.get('references', '')
@@ -231,41 +226,36 @@ def manage_users():
 @admin_required
 def make_admin(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot change your own admin status', 'danger')
-    else:
+    if user.id != current_user.id:
         user.is_admin = True
         db.session.commit()
-        flash(f'{user.username} is now an admin', 'success')
+        flash(f'{user.username} is now admin', 'success')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/remove_admin/<int:user_id>')
 @admin_required
 def remove_admin(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot change your own admin status', 'danger')
-    else:
+    if user.id != current_user.id:
         user.is_admin = False
         db.session.commit()
-        flash(f'{user.username} is no longer an admin', 'success')
+        flash(f'{user.username} is no longer admin', 'success')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/delete_user/<int:user_id>')
 @admin_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot delete your own account', 'danger')
-    else:
+    if user.id != current_user.id and user.username != 'admin':
         db.session.delete(user)
         db.session.commit()
-        flash(f'User {user.username} deleted', 'success')
+        flash('User deleted', 'success')
     return redirect(url_for('manage_users'))
 
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
+    topics = []
     if query and len(query) >= 2:
         topics = Topic.query.filter(
             db.or_(
@@ -274,26 +264,9 @@ def search():
                 Topic.theory_notes.contains(query)
             )
         ).all()
-        return render_template('search.html', query=query, topics=topics)
-    return render_template('search.html', query=query, topics=[])
+    return render_template('search.html', query=query, topics=topics)
 
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=10000)import os
-from werkzeug.utils import secure_filename
-from flask import send_file
-
-# Configuration for file uploads
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'png', 'jpg', 'jpeg'}
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@app.route('/download_document/<int:doc_id>')
+@app.route('/download/<int:doc_id>')
 @login_required
 def download_document(doc_id):
     doc = Document.query.get_or_404(doc_id)
@@ -303,7 +276,7 @@ def download_document(doc_id):
     flash('File not found', 'danger')
     return redirect(request.referrer)
 
-@app.route('/delete_document/<int:doc_id>')
+@app.route('/delete_doc/<int:doc_id>')
 @admin_required
 def delete_document(doc_id):
     doc = Document.query.get_or_404(doc_id)
@@ -315,14 +288,5 @@ def delete_document(doc_id):
     flash('Document deleted', 'success')
     return redirect(request.referrer)
 
-@app.route('/run_code', methods=['POST'])
-@login_required
-def run_code():
-    import subprocess
-    code = request.json.get('code', '')
-    try:
-        # For security, run in a sandboxed environment
-        result = subprocess.run(['python', '-c', code], capture_output=True, text=True, timeout=5)
-        return {'output': result.stdout, 'error': result.stderr}
-    except Exception as e:
-        return {'error': str(e)}
+if __name__ == '__main__':
+    app.run(debug=False, host='0.0.0.0', port=10000)
