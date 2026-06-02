@@ -201,18 +201,23 @@ def add_topic(category_id):
 def edit_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     if request.method == 'POST':
-        topic.name = request.form['name']
-        topic.definition = request.form['definition']
-        topic.theory_notes = request.form['theory_notes']
-        topic.code_examples = request.form['code_examples']
-        topic.videos = request.form['videos']
-        topic.images_diagrams = request.form['images_diagrams']
-        topic.github_links = request.form['github_links']
-        topic.project_links = request.form['project_links']
-        topic.references = request.form['references']
-        topic.updated_at = datetime.utcnow()
-        db.session.commit()
-        flash('Topic updated successfully!', 'success')
+        try:
+            topic.name = request.form['name']
+            topic.definition = request.form['definition']
+            topic.theory_notes = request.form['theory_notes']
+            topic.code_examples = request.form['code_examples']
+            topic.videos = request.form['videos']
+            topic.images_diagrams = request.form['images_diagrams']
+            topic.github_links = request.form['github_links']
+            topic.project_links = request.form['project_links']
+            topic.references = request.form['references']
+            topic.difficulty = request.form.get('difficulty', 'Beginner')
+            topic.updated_at = datetime.utcnow()
+            db.session.commit()
+            flash('Topic updated successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating topic: {str(e)}', 'danger')
         return redirect(url_for('view_topic', topic_id=topic_id))
     return render_template('edit_topic.html', topic=topic)
 

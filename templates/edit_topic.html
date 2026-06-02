@@ -2,68 +2,68 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header bg-success text-white">
-            <h2>Add New Topic to: {{ category.name }}</h2>
+        <div class="card-header bg-warning">
+            <h2>✏️ Edit Topic: {{ topic.name }}</h2>
         </div>
         <div class="card-body">
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label fw-bold">Topic Name</label>
-                    <input type="text" name="name" class="form-control" required>
+                    <input type="text" name="name" class="form-control" value="{{ topic.name }}" required>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Difficulty Level</label>
                     <select name="difficulty" class="form-select">
-                        <option value="Beginner">🌱 Beginner</option>
-                        <option value="Intermediate">📘 Intermediate</option>
-                        <option value="Advanced">🚀 Advanced</option>
+                        <option value="Beginner" {% if topic.difficulty == 'Beginner' %}selected{% endif %}>🌱 Beginner</option>
+                        <option value="Intermediate" {% if topic.difficulty == 'Intermediate' %}selected{% endif %}>📘 Intermediate</option>
+                        <option value="Advanced" {% if topic.difficulty == 'Advanced' %}selected{% endif %}>🚀 Advanced</option>
                     </select>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Definition</label>
-                    <textarea name="definition" class="form-control" rows="5"></textarea>
+                    <textarea name="definition" class="form-control" rows="5">{{ topic.definition or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Theory Notes</label>
-                    <textarea name="theory_notes" class="form-control" rows="10"></textarea>
+                    <textarea name="theory_notes" class="form-control" rows="10">{{ topic.theory_notes or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Code Examples</label>
-                    <textarea name="code_examples" class="form-control" rows="8"></textarea>
+                    <textarea name="code_examples" class="form-control" rows="8">{{ topic.code_examples or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Videos (YouTube URLs)</label>
-                    <textarea name="videos" class="form-control" rows="3"></textarea>
+                    <textarea name="videos" class="form-control" rows="3">{{ topic.videos or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Images/Diagrams URLs</label>
-                    <textarea name="images_diagrams" class="form-control" rows="3"></textarea>
+                    <textarea name="images_diagrams" class="form-control" rows="3">{{ topic.images_diagrams or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">GitHub Links</label>
-                    <textarea name="github_links" class="form-control" rows="3"></textarea>
+                    <textarea name="github_links" class="form-control" rows="3">{{ topic.github_links or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Project Links</label>
-                    <textarea name="project_links" class="form-control" rows="3"></textarea>
+                    <textarea name="project_links" class="form-control" rows="3">{{ topic.project_links or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">References</label>
-                    <textarea name="references" class="form-control" rows="3"></textarea>
+                    <textarea name="references" class="form-control" rows="3">{{ topic.references or '' }}</textarea>
                 </div>
                 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">💾 Save Topic</button>
-                    <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">❌ Cancel</a>
+                    <button type="submit" class="btn btn-primary">💾 Update Topic</button>
+                    <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-secondary">❌ Cancel</a>
                 </div>
             </form>
         </div>
