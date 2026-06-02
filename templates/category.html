@@ -17,7 +17,14 @@
     <div class="col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title">{{ topic.name }}</h5>
+                                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">{{ topic.name }}</h5>
+                                    {% if topic.difficulty %}
+                                        <span class="badge bg-{% if topic.difficulty == "Beginner" %}success{% elif topic.difficulty == "Intermediate" %}warning{% else %}danger{% endif %}">
+                                            {{ topic.difficulty }}
+                                        </span>
+                                    {% endif %}
+                                </div>
                 <p class="card-text">{{ topic.definition[:150] if topic.definition else 'No definition' }}...</p>
                 <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-info">View Details</a>
                 {% if current_user.is_authenticated and current_user.is_admin %}
@@ -30,3 +37,4 @@
     {% endfor %}
 </div>
 {% endblock %}
+

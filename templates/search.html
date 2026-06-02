@@ -1,0 +1,55 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>🔍 Search Results for "{{ query }}"</h2>
+    
+    {% if not query %}
+        <div class="alert alert-info">Enter a search term above to find topics and categories.</div>
+    {% elif topics|length == 0 and categories|length == 0 %}
+        <div class="alert alert-warning">No results found for "{{ query }}". Try different keywords.</div>
+    {% else %}
+        {% if categories %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>📁 Categories ({{ categories|length }})</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for category in categories %}
+                    <div class="col-md-4 mb-2">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>{{ category.name }}</h5>
+                                <p>{{ category.description[:100] if category.description else 'No description' }}</p>
+                                <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-sm btn-primary">View Category</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if topics %}
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4>📚 Topics ({{ topics|length }})</h4>
+            </div>
+            <div class="card-body">
+                {% for topic in topics %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5>{{ topic.name }}</h5>
+                        <p class="text-muted">Category: {{ topic.category.name }}</p>
+                        <p>{{ topic.definition[:200] if topic.definition else 'No definition available' }}...</p>
+                        <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-info btn-sm">Read More →</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

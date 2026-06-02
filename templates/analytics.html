@@ -1,0 +1,81 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>📊 Analytics Dashboard</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Topics</h5>
+                    <h2>{{ total_topics }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Categories</h5>
+                    <h2>{{ total_categories }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Users</h5>
+                    <h2>{{ total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Topics/Category</h5>
+                    <h2>{{ "%.1f"|format(total_topics/total_categories if total_categories > 0 else 0) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Topics by Category</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Category</th><th>Topics</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in topics_by_category %}
+                            <tr><td>{{ cat.name }}</td><td>{{ cat.topic_count }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recently Updated Topics</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for topic in recent_topics %}
+                        <li class="list-group-item">
+                            <a href="{{ url_for('view_topic', topic_id=topic.id) }}">{{ topic.name }}</a>
+                            <small class="text-muted"> - Updated: {{ topic.updated_at.strftime('%Y-%m-%d') if topic.updated_at else 'Never' }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

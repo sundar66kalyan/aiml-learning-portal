@@ -1,7 +1,13 @@
 ﻿{% extends "base.html" %}
 {% block content %}
 <div class="d-flex justify-content-between mb-4">
-    <h1>{{ topic.name }}</h1>
+    <h1>{{ topic.name }}
+        {% if topic.difficulty %}
+            <span class="badge bg-{% if topic.difficulty == "Beginner" %}success{% elif topic.difficulty == "Intermediate" %}warning{% else %}danger{% endif %} ms-2">{{ topic.difficulty }}</span>
+        {% endif %}
+        {% if topic.views %}
+            <small class="text-muted ms-2">👁️ {{ topic.views }} views</small>
+        {% endif %}
     <div>
         {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('edit_topic', topic_id=topic.id) }}" class="btn btn-warning">Edit</a>
@@ -67,3 +73,4 @@
     </div>
 </div>
 {% endblock %}
+

@@ -37,6 +37,8 @@ class Topic(db.Model):
     github_links = db.Column(db.Text)
     project_links = db.Column(db.Text)
     references = db.Column(db.Text)
+    difficulty = db.Column(db.String(20), default='Beginner')
+    views = db.Column(db.Integer, default=0)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

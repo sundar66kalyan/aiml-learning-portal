@@ -56,6 +56,8 @@ def view_category(category_id):
 @app.route('/topic/<int:topic_id>')
 def view_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
+    topic.views = (topic.views or 0) + 1
+    db.session.commit()
     return render_template('topic.html', topic=topic, current_user=current_user)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -185,6 +187,7 @@ def add_topic(category_id):
             github_links=request.form['github_links'],
             project_links=request.form['project_links'],
             references=request.form['references'],
+            difficulty=request.form.get('difficulty', 'Beginner'),
             category_id=category_id
         )
         db.session.add(topic)
@@ -250,3 +253,19 @@ def init_db():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
+
+@app.route('/search')
+def search():
+    query = request.args.get('q', '')
+    if query and len(query) >= 2:
+        topics = Topic.query.filter(
+            db.or_(
+                Topic.name.contains(query),
+                Topic.definition.contains(query),
+                Topic.theory_notes.contains(query),
+                Topic.code_examples.contains(query)
+            )
+        ).all()
+        categories = Category.query.filter(Category.name.contains(query)).all()
+        return render_template('search.html', query=query, topics=topics, categories=categories)
+    return render_template('search.html', query=query, topics=[], categories=[])
