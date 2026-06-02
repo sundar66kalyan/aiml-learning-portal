@@ -267,3 +267,173 @@ def search():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
+import subprocess
+import sys
+import tempfile
+import os
+
+@app.route('/run_code', methods=['POST'])
+@login_required
+def run_code():
+    try:
+        code = request.json.get('code', '')
+        
+        # Create a temporary file to run the code
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        # Run the code and capture output
+        result = subprocess.run(
+            [sys.executable, temp_file],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        # Clean up temp file
+        os.unlink(temp_file)
+        
+        output = result.stdout
+        if result.stderr:
+            output += '\n\nErrors:\n' + result.stderr
+        
+        return {'output': output, 'error': None}
+    except subprocess.TimeoutExpired:
+        return {'output': None, 'error': 'Code execution timed out (10 seconds)'}
+    except Exception as e:
+        return {'output': None, 'error': str(e)}
+from werkzeug.utils import secure_filename
+
+# Configure upload
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py'}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Update add_topic to handle file uploads
+@app.route('/add_topic/<int:category_id>', methods=['GET', 'POST'])
+@admin_required
+def add_topic(category_id):
+    category = Category.query.get_or_404(category_id)
+    if request.method == 'POST':
+        try:
+            # Create topic
+            topic = Topic(
+                name=request.form['name'],
+                definition=request.form.get('definition', ''),
+                theory_notes=request.form.get('theory_notes', ''),
+                code_examples=request.form.get('code_examples', ''),
+                videos=request.form.get('videos', ''),
+                images=request.form.get('images', ''),
+                github_links=request.form.get('github_links', ''),
+                project_links=request.form.get('project_links', ''),
+                references=request.form.get('references', ''),
+                difficulty=request.form.get('difficulty', 'Beginner'),
+                category_id=category_id
+            )
+            db.session.add(topic)
+            db.session.flush()  # Get topic ID before commit
+            
+            # Handle file uploads
+            files = request.files.getlist('documents')
+            for file in files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    # Create unique filename
+                    name, ext = os.path.splitext(filename)
+                    unique_filename = f"{name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}{ext}"
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                    file.save(filepath)
+                    
+                    # Save to database
+                    doc = Document(
+                        topic_id=topic.id,
+                        filename=filename,
+                        file_path=unique_filename,
+                        file_type=ext[1:],
+                        file_size=os.path.getsize(filepath)
+                    )
+                    db.session.add(doc)
+            
+            db.session.commit()
+            flash('Topic added successfully!', 'success')
+            return redirect(url_for('view_category', category_id=category_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('add_topic.html', category=category)
+    return render_template('add_topic.html', category=category)
+
+# Update edit_topic to handle file uploads
+@app.route('/edit_topic/<int:topic_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_topic(topic_id):
+    topic = Topic.query.get_or_404(topic_id)
+    if request.method == 'POST':
+        try:
+            # Update topic fields
+            topic.name = request.form['name']
+            topic.definition = request.form.get('definition', '')
+            topic.theory_notes = request.form.get('theory_notes', '')
+            topic.code_examples = request.form.get('code_examples', '')
+            topic.videos = request.form.get('videos', '')
+            topic.images = request.form.get('images', '')
+            topic.github_links = request.form.get('github_links', '')
+            topic.project_links = request.form.get('project_links', '')
+            topic.references = request.form.get('references', '')
+            topic.difficulty = request.form.get('difficulty', 'Beginner')
+            topic.updated_at = datetime.utcnow()
+            
+            # Handle new file uploads
+            files = request.files.getlist('documents')
+            for file in files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    name, ext = os.path.splitext(filename)
+                    unique_filename = f"{name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}{ext}"
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                    file.save(filepath)
+                    
+                    doc = Document(
+                        topic_id=topic.id,
+                        filename=filename,
+                        file_path=unique_filename,
+                        file_type=ext[1:],
+                        file_size=os.path.getsize(filepath)
+                    )
+                    db.session.add(doc)
+            
+            db.session.commit()
+            flash('Topic updated successfully!', 'success')
+            return redirect(url_for('view_topic', topic_id=topic_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('edit_topic.html', topic=topic)
+    return render_template('edit_topic.html', topic=topic)
+
+@app.route('/download/<int:doc_id>')
+@login_required
+def download_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True, download_name=doc.filename)
+    flash('File not found', 'danger')
+    return redirect(request.referrer)
+
+@app.route('/delete_doc/<int:doc_id>')
+@admin_required
+def delete_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    db.session.delete(doc)
+    db.session.commit()
+    flash('Document deleted', 'success')
+    return redirect(request.referrer)
