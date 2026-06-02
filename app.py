@@ -37,7 +37,6 @@ def create_admin():
         db.session.add(admin)
         db.session.commit()
         print("Admin created: admin/admin123")
-        print("⚠️ Please change this password after first login!")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -51,7 +50,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('Please login to access this page', 'danger')
+            flash('Please login', 'danger')
             return redirect(url_for('login'))
         if not current_user.is_admin:
             flash('Admin privileges required', 'danger')
@@ -86,9 +85,9 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and user.check_password(request.form['password']):
             login_user(user)
-            flash('Logged in successfully!', 'success')
+            flash('Logged in!', 'success')
             return redirect(url_for('index'))
-        flash('Invalid username or password', 'danger')
+        flash('Invalid credentials', 'danger')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -102,18 +101,18 @@ def register():
         if password != confirm:
             flash('Passwords do not match', 'danger')
         elif len(password) < 6:
-            flash('Password must be at least 6 characters', 'danger')
+            flash('Password too short', 'danger')
         elif User.query.filter_by(username=username).first():
-            flash('Username already exists', 'danger')
+            flash('Username exists', 'danger')
         elif User.query.filter_by(email=email).first():
-            flash('Email already registered', 'danger')
+            flash('Email exists', 'danger')
         else:
             is_admin = current_user.is_authenticated and current_user.is_admin and request.form.get('is_admin') == 'true'
             new_user = User(username=username, email=email, is_admin=is_admin)
             new_user.set_password(password)
             db.session.add(new_user)
             db.session.commit()
-            flash(f'User {username} created successfully!', 'success')
+            flash('User created!', 'success')
             if current_user.is_authenticated and current_user.is_admin:
                 return redirect(url_for('manage_users'))
             login_user(new_user)
@@ -124,7 +123,7 @@ def register():
 @login_required
 def logout():
     logout_user()
-    flash('Logged out successfully', 'info')
+    flash('Logged out', 'info')
     return redirect(url_for('index'))
 
 @app.route('/profile')
@@ -136,15 +135,15 @@ def profile():
 @login_required
 def change_password():
     if not current_user.check_password(request.form['current_password']):
-        flash('Current password is incorrect', 'danger')
+        flash('Current password incorrect', 'danger')
     elif request.form['new_password'] != request.form['confirm_password']:
-        flash('New passwords do not match', 'danger')
+        flash('Passwords do not match', 'danger')
     elif len(request.form['new_password']) < 6:
-        flash('Password must be at least 6 characters', 'danger')
+        flash('Password too short', 'danger')
     else:
         current_user.set_password(request.form['new_password'])
         db.session.commit()
-        flash('Password changed successfully!', 'success')
+        flash('Password changed!', 'success')
     return redirect(url_for('profile'))
 
 # ========== CATEGORY MANAGEMENT ==========
@@ -155,7 +154,7 @@ def add_category():
         category = Category(name=request.form['name'], description=request.form['description'])
         db.session.add(category)
         db.session.commit()
-        flash('Category added successfully!', 'success')
+        flash('Category added!', 'success')
         return redirect(url_for('index'))
     return render_template('add_category.html')
 
@@ -165,30 +164,18 @@ def delete_category(category_id):
     category = Category.query.get_or_404(category_id)
     db.session.delete(category)
     db.session.commit()
-    flash('Category deleted successfully!', 'success')
+    flash('Category deleted!', 'success')
     return redirect(url_for('index'))
 
-# ========== TOPIC MANAGEMENT - COMPLETE WORKING VERSION ==========
+# ========== TOPIC MANAGEMENT ==========
 @app.route('/add_topic/<int:category_id>', methods=['GET', 'POST'])
 @admin_required
 def add_topic(category_id):
     category = Category.query.get_or_404(category_id)
-    
     if request.method == 'POST':
         try:
-            print("=" * 50)
-            print("ADDING NEW TOPIC")
-            print(f"Category ID: {category_id}")
-            
-            # Get form data
-            topic_name = request.form.get('name', '').strip()
-            if not topic_name:
-                flash('Topic name is required!', 'danger')
-                return render_template('add_topic.html', category=category)
-            
-            # Create topic object with all fields
             topic = Topic(
-                name=topic_name,
+                name=request.form['name'],
                 definition=request.form.get('definition', ''),
                 theory_notes=request.form.get('theory_notes', ''),
                 code_examples=request.form.get('code_examples', ''),
@@ -200,68 +187,42 @@ def add_topic(category_id):
                 difficulty=request.form.get('difficulty', 'Beginner'),
                 category_id=category_id
             )
-            
-            # Log what we're saving
-            print(f"Topic Name: {topic.name}")
-            print(f"Code Examples length: {len(topic.code_examples) if topic.code_examples else 0}")
-            print(f"Videos: {topic.videos[:50] if topic.videos else 'None'}")
-            
             db.session.add(topic)
-            db.session.flush()  # This assigns an ID to the topic
+            db.session.flush()
             
-            # Handle document uploads
-            if 'documents' in request.files:
-                files = request.files.getlist('documents')
-                print(f"Processing {len(files)} document(s)")
-                
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        # Create unique filename to avoid collisions
-                        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                        unique_filename = f"{timestamp}_{filename}"
-                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                        file.save(filepath)
-                        
-                        doc = Document(
-                            topic_id=topic.id,
-                            filename=filename,
-                            file_path=unique_filename,
-                            file_type=filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown',
-                            file_size=os.path.getsize(filepath)
-                        )
-                        db.session.add(doc)
-                        print(f"  - Saved document: {filename}")
+            files = request.files.getlist('documents')
+            for file in files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                    file.save(filepath)
+                    
+                    doc = Document(
+                        topic_id=topic.id,
+                        filename=filename,
+                        file_path=unique_filename,
+                        file_type=filename.rsplit('.', 1)[1].lower(),
+                        file_size=os.path.getsize(filepath)
+                    )
+                    db.session.add(doc)
             
             db.session.commit()
-            print(f"✅ Topic '{topic.name}' added successfully!")
-            print("=" * 50)
-            
-            flash(f'Topic "{topic.name}" added successfully!', 'success')
+            flash('Topic added successfully!', 'success')
             return redirect(url_for('view_category', category_id=category_id))
-            
         except Exception as e:
             db.session.rollback()
-            print(f"❌ ERROR adding topic: {str(e)}")
-            flash(f'Error adding topic: {str(e)}', 'danger')
+            flash(f'Error: {str(e)}', 'danger')
             return render_template('add_topic.html', category=category)
-    
     return render_template('add_topic.html', category=category)
-
 
 @app.route('/edit_topic/<int:topic_id>', methods=['GET', 'POST'])
 @admin_required
 def edit_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
-    
     if request.method == 'POST':
         try:
-            print("=" * 50)
-            print(f"EDITING TOPIC ID: {topic_id}")
-            print(f"Original Name: {topic.name}")
-            
-            # Update all topic fields
-            topic.name = request.form.get('name', topic.name)
+            topic.name = request.form['name']
             topic.definition = request.form.get('definition', '')
             topic.theory_notes = request.form.get('theory_notes', '')
             topic.code_examples = request.form.get('code_examples', '')
@@ -273,65 +234,40 @@ def edit_topic(topic_id):
             topic.difficulty = request.form.get('difficulty', 'Beginner')
             topic.updated_at = datetime.utcnow()
             
-            print(f"Updated Name: {topic.name}")
-            print(f"Code Examples length: {len(topic.code_examples) if topic.code_examples else 0}")
-            print(f"Videos: {topic.videos[:50] if topic.videos else 'None'}")
-            
-            # Handle new document uploads
-            if 'documents' in request.files:
-                files = request.files.getlist('documents')
-                print(f"Processing {len(files)} new document(s)")
-                
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                        unique_filename = f"{timestamp}_{filename}"
-                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                        file.save(filepath)
-                        
-                        doc = Document(
-                            topic_id=topic.id,
-                            filename=filename,
-                            file_path=unique_filename,
-                            file_type=filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown',
-                            file_size=os.path.getsize(filepath)
-                        )
-                        db.session.add(doc)
-                        print(f"  - Added document: {filename}")
+            files = request.files.getlist('documents')
+            for file in files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                    file.save(filepath)
+                    
+                    doc = Document(
+                        topic_id=topic.id,
+                        filename=filename,
+                        file_path=unique_filename,
+                        file_type=filename.rsplit('.', 1)[1].lower(),
+                        file_size=os.path.getsize(filepath)
+                    )
+                    db.session.add(doc)
             
             db.session.commit()
-            print(f"✅ Topic '{topic.name}' updated successfully!")
-            print("=" * 50)
-            
-            flash(f'Topic "{topic.name}" updated successfully!', 'success')
-            return redirect(url_for('view_topic', topic_id=topic.id))
-            
+            flash('Topic updated!', 'success')
+            return redirect(url_for('view_topic', topic_id=topic_id))
         except Exception as e:
             db.session.rollback()
-            print(f"❌ ERROR editing topic: {str(e)}")
-            flash(f'Error updating topic: {str(e)}', 'danger')
+            flash(f'Error: {str(e)}', 'danger')
             return render_template('edit_topic.html', topic=topic)
-    
     return render_template('edit_topic.html', topic=topic)
-
 
 @app.route('/delete_topic/<int:topic_id>')
 @admin_required
 def delete_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     category_id = topic.category_id
-    topic_name = topic.name
-    
-    # Delete associated documents from filesystem
-    for doc in topic.documents:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], doc.file_path)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    
     db.session.delete(topic)
     db.session.commit()
-    flash(f'Topic "{topic_name}" deleted successfully!', 'success')
+    flash('Topic deleted!', 'success')
     return redirect(url_for('view_category', category_id=category_id))
 
 # ========== CODE EXECUTION ==========
@@ -340,41 +276,22 @@ def delete_topic(topic_id):
 def run_code():
     try:
         code = request.json.get('code', '')
-        if not code.strip():
-            return {'output': '⚠️ Please enter some code to run'}
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
             f.write(code)
             temp_file = f.name
         
-        # Run with timeout to prevent infinite loops
-        result = subprocess.run(
-            [sys.executable, temp_file],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            cwd='/tmp'
-        )
-        
+        result = subprocess.run([sys.executable, temp_file], capture_output=True, text=True, timeout=10)
         os.unlink(temp_file)
         
-        output = ""
-        if result.stdout:
-            output = result.stdout
+        output = result.stdout
         if result.stderr:
-            if output:
-                output += "\n" + "="*40 + "\n"
-            output += "⚠️ ERRORS/WARNINGS:\n" + result.stderr
-        
-        if not output:
-            output = "✅ Code executed successfully (no output)"
+            output += '\n\nErrors:\n' + result.stderr
         
         return {'output': output}
-        
     except subprocess.TimeoutExpired:
-        return {'output': '⏰ Code execution timed out (15 seconds). Check for infinite loops.'}
+        return {'output': 'Code execution timed out (10 seconds)'}
     except Exception as e:
-        return {'output': f'❌ Error: {str(e)}'}
+        return {'output': f'Error: {str(e)}'}
 
 # ========== DOCUMENT MANAGEMENT ==========
 @app.route('/download/<int:doc_id>')
@@ -396,7 +313,7 @@ def delete_document(doc_id):
         os.remove(file_path)
     db.session.delete(doc)
     db.session.commit()
-    flash('Document deleted successfully', 'success')
+    flash('Document deleted', 'success')
     return redirect(request.referrer)
 
 # ========== USER MANAGEMENT ==========
@@ -410,38 +327,30 @@ def manage_users():
 @admin_required
 def make_admin(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot change your own admin status', 'danger')
-    else:
+    if user.id != current_user.id:
         user.is_admin = True
         db.session.commit()
-        flash(f'{user.username} is now an admin', 'success')
+        flash(f'{user.username} is now admin', 'success')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/remove_admin/<int:user_id>')
 @admin_required
 def remove_admin(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot change your own admin status', 'danger')
-    else:
+    if user.id != current_user.id:
         user.is_admin = False
         db.session.commit()
-        flash(f'{user.username} is no longer an admin', 'success')
+        flash(f'{user.username} is no longer admin', 'success')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/delete_user/<int:user_id>')
 @admin_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('You cannot delete your own account', 'danger')
-    elif user.username == 'admin':
-        flash('Cannot delete the main admin account', 'danger')
-    else:
+    if user.id != current_user.id and user.username != 'admin':
         db.session.delete(user)
         db.session.commit()
-        flash(f'User {user.username} deleted', 'success')
+        flash('User deleted', 'success')
     return redirect(url_for('manage_users'))
 
 # ========== SEARCH ==========
@@ -449,43 +358,71 @@ def delete_user(user_id):
 def search():
     query = request.args.get('q', '')
     topics = []
-    categories = []
     if query and len(query) >= 2:
         topics = Topic.query.filter(
             db.or_(
                 Topic.name.contains(query),
                 Topic.definition.contains(query),
-                Topic.theory_notes.contains(query),
-                Topic.code_examples.contains(query)
+                Topic.theory_notes.contains(query)
             )
         ).all()
-        categories = Category.query.filter(Category.name.contains(query)).all()
-    return render_template('search.html', query=query, topics=topics, categories=categories)
+    return render_template('search.html', query=query, topics=topics)
 
-# ========== DEBUG ROUTE ==========
+# ========== DEBUG ROUTE (FIXED) ==========
 @app.route('/debug_topic/<int:topic_id>')
 @admin_required
 def debug_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
-    return f"""
-    <h2>Debug Info: {topic.name}</h2>
-    <p><strong>ID:</strong> {topic.id}</p>
-    <p><strong>Category:</strong> {topic.category.name}</p>
-    <p><strong>Difficulty:</strong> {topic.difficulty}</p>
-    <p><strong>Views:</strong> {topic.views}</p>
-    <p><strong>Code Examples:</strong></p>
-    <pre style="background:#f0f0f0; padding:10px;">{topic.code_examples or 'EMPTY'}</pre>
-    <p><strong>Videos:</strong> {topic.videos or 'EMPTY'}</p>
-    <p><strong>Images:</strong> {topic.images or 'EMPTY'}</p>
-    <p><strong>Documents:</strong> {len(topic.documents)} files</p>
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Debug: {topic.name}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        pre {{ background: #f4f4f4; padding: 10px; border: 1px solid #ddd; overflow: auto; }}
+        .info {{ background: #e8f4f8; padding: 10px; margin: 10px 0; }}
+    </style>
+    </head>
+    <body>
+    <h1>🔍 Debug Info: {topic.name}</h1>
+    <div class="info">
+        <p><strong>ID:</strong> {topic.id}</p>
+        <p><strong>Category:</strong> {topic.category.name if topic.category else 'None'}</p>
+        <p><strong>Difficulty:</strong> {topic.difficulty}</p>
+        <p><strong>Views:</strong> {topic.views}</p>
+        <p><strong>Created:</strong> {topic.created_at}</p>
+        <p><strong>Updated:</strong> {topic.updated_at}</p>
+    </div>
+    
+    <h2>💻 Code Examples:</h2>
+    <pre>{topic.code_examples if topic.code_examples else '⚠️ EMPTY - No code examples saved!'}</pre>
+    
+    <h2>🎥 Videos:</h2>
+    <pre>{topic.videos if topic.videos else 'EMPTY'}</pre>
+    
+    <h2>🖼️ Images:</h2>
+    <pre>{topic.images if topic.images else 'EMPTY'}</pre>
+    
+    <h2>📦 GitHub Links:</h2>
+    <pre>{topic.github_links if topic.github_links else 'EMPTY'}</pre>
+    
+    <h2>📄 Documents ({len(topic.documents)} files):</h2>
     <ul>
-    {% for doc in topic.documents %}
-    <li>{doc.filename} ({doc.file_size} bytes)</li>
-    {% endfor %}
-    </ul>
-    <a href="/edit_topic/{topic_id}">✏️ Edit Topic</a> | 
-    <a href="/topic/{topic_id}">👁️ View Topic</a>
     """
+    for doc in topic.documents:
+        html += f'<li><a href="/download/{doc.id}">📎 {doc.filename}</a> ({doc.file_size} bytes)</li>'
+    html += f"""
+    </ul>
+    
+    <hr>
+    <p>
+        <a href="/edit_topic/{topic.id}">✏️ Edit Topic</a> | 
+        <a href="/topic/{topic.id}">👁️ View Topic</a>
+    </p>
+    </body>
+    </html>
+    """
+    return html
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
