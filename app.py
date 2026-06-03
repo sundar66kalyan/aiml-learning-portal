@@ -1,4 +1,9 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+﻿# Backup current app.py
+Copy-Item app.py app.py.backup
+
+# Create clean app.py (keep only what's needed)
+@'
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Category, Topic, Document
 from datetime import datetime
@@ -6,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import requests
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -18,7 +24,7 @@ UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py', 'jpg', 'jpeg', 'png', 'gif'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -76,7 +82,6 @@ def view_topic(topic_id):
     db.session.commit()
     return render_template('topic.html', topic=topic, current_user=current_user)
 
-# ========== AUTHENTICATION ==========
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -146,7 +151,6 @@ def change_password():
         flash('Password changed!', 'success')
     return redirect(url_for('profile'))
 
-# ========== CATEGORY MANAGEMENT ==========
 @app.route('/add_category', methods=['GET', 'POST'])
 @admin_required
 def add_category():
@@ -167,7 +171,6 @@ def delete_category(category_id):
     flash('Category deleted!', 'success')
     return redirect(url_for('index'))
 
-# ========== TOPIC MANAGEMENT ==========
 @app.route('/add_topic/<int:category_id>', methods=['GET', 'POST'])
 @admin_required
 def add_topic(category_id):
@@ -270,7 +273,6 @@ def delete_topic(topic_id):
     flash('Topic deleted!', 'success')
     return redirect(url_for('view_category', category_id=category_id))
 
-# ========== CODE EXECUTION ==========
 @app.route('/run_code', methods=['POST'])
 @login_required
 def run_code():
@@ -293,7 +295,7 @@ def run_code():
     except Exception as e:
         return {'output': f'Error: {str(e)}'}
 
-# ========== DOCUMENT MANAGEMENT ==========
+# ========== DOCUMENT MANAGEMENT (ONLY ONE VERSION) ==========
 @app.route('/download/<int:doc_id>')
 @login_required
 def download_document(doc_id):
@@ -353,7 +355,6 @@ def delete_user(user_id):
         flash('User deleted', 'success')
     return redirect(url_for('manage_users'))
 
-# ========== SEARCH ==========
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
@@ -368,161 +369,8 @@ def search():
         ).all()
     return render_template('search.html', query=query, topics=topics)
 
-# ========== DEBUG ROUTE (FIXED) ==========
-@app.route('/debug_topic/<int:topic_id>')
-@admin_required
-def debug_topic(topic_id):
-    topic = Topic.query.get_or_404(topic_id)
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><title>Debug: {topic.name}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        pre {{ background: #f4f4f4; padding: 10px; border: 1px solid #ddd; overflow: auto; }}
-        .info {{ background: #e8f4f8; padding: 10px; margin: 10px 0; }}
-    </style>
-    </head>
-    <body>
-    <h1>🔍 Debug Info: {topic.name}</h1>
-    <div class="info">
-        <p><strong>ID:</strong> {topic.id}</p>
-        <p><strong>Category:</strong> {topic.category.name if topic.category else 'None'}</p>
-        <p><strong>Difficulty:</strong> {topic.difficulty}</p>
-        <p><strong>Views:</strong> {topic.views}</p>
-        <p><strong>Created:</strong> {topic.created_at}</p>
-        <p><strong>Updated:</strong> {topic.updated_at}</p>
-    </div>
-    
-    <h2>💻 Code Examples:</h2>
-    <pre>{topic.code_examples if topic.code_examples else '⚠️ EMPTY - No code examples saved!'}</pre>
-    
-    <h2>🎥 Videos:</h2>
-    <pre>{topic.videos if topic.videos else 'EMPTY'}</pre>
-    
-    <h2>🖼️ Images:</h2>
-    <pre>{topic.images if topic.images else 'EMPTY'}</pre>
-    
-    <h2>📦 GitHub Links:</h2>
-    <pre>{topic.github_links if topic.github_links else 'EMPTY'}</pre>
-    
-    <h2>📄 Documents ({len(topic.documents)} files):</h2>
-    <ul>
-    """
-    for doc in topic.documents:
-        html += f'<li><a href="/download/{doc.id}">📎 {doc.filename}</a> ({doc.file_size} bytes)</li>'
-    html += f"""
-    </ul>
-    
-    <hr>
-    <p>
-        <a href="/edit_topic/{topic.id}">✏️ Edit Topic</a> | 
-        <a href="/topic/{topic.id}">👁️ View Topic</a>
-    </p>
-    </body>
-    </html>
-    """
-    return html
-
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
-import requests
+'@ | Out-File -FilePath app.py -Encoding UTF8
 
-@app.route('/download_from_drive', methods=['POST'])
-@admin_required
-def download_from_drive():
-    try:
-        file_data = request.json
-        file_id = file_data.get('file_id')
-        file_name = file_data.get('file_name')
-        
-        # Download from Google Drive
-        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-        headers = {'Authorization': f'Bearer {file_data.get("token")}'}
-        
-        response = requests.get(download_url, headers=headers)
-        
-        if response.status_code == 200:
-            # Save the file
-            filename = secure_filename(file_name)
-            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            
-            with open(filepath, 'wb') as f:
-                f.write(response.content)
-            
-            return {'success': True, 'filename': filename, 'filepath': unique_filename}
-        else:
-            return {'success': False, 'error': 'Download failed'}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-@app.route('/download_from_drive', methods=['POST'])
-@admin_required
-def download_from_drive():
-    try:
-        file_data = request.json
-        file_id = file_data.get('file_id')
-        file_name = file_data.get('file_name')
-        
-        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-        headers = {'Authorization': f'Bearer {file_data.get("token")}'}
-        
-        response = requests.get(download_url, headers=headers)
-        
-        if response.status_code == 200:
-            filename = secure_filename(file_name)
-            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            
-            with open(filepath, 'wb') as f:
-                f.write(response.content)
-            
-            return {'success': True, 'filename': filename, 'filepath': unique_filename}
-        else:
-            return {'success': False, 'error': 'Download failed'}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-@app.route('/process_google_drive', methods=['POST'])
-@admin_required
-def process_google_drive():
-    try:
-        import requests
-        data = request.json
-        file_id = data.get('file_id')
-        file_name = data.get('file_name')
-        access_token = data.get('access_token')
-        
-        if not file_id or not access_token:
-            return {'success': False, 'error': 'Missing file ID or token'}
-        
-        # Download file from Google Drive
-        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-        headers = {'Authorization': f'Bearer {access_token}'}
-        
-        response = requests.get(download_url, headers=headers, stream=True)
-        
-        if response.status_code == 200:
-            # Save file
-            filename = secure_filename(file_name)
-            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            file_size = os.path.getsize(filepath)
-            
-            return {
-                'success': True, 
-                'filename': filename,
-                'filepath': unique_filename,
-                'size': file_size
-            }
-        else:
-            return {'success': False, 'error': f'Download failed: HTTP {response.status_code}'}
-            
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
+Write-Host "✅ Clean app.py created with no duplicate routes!" -ForegroundColor Green
