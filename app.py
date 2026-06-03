@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Category, Topic, Document
 from datetime import datetime
@@ -358,19 +358,6 @@ def search():
             )
         ).all()
     return render_template('search.html', query=query, topics=topics)
-
-@app.route('/debug_topic/<int:topic_id>')
-@admin_required
-def debug_topic(topic_id):
-    topic = Topic.query.get_or_404(topic_id)
-    html = f"<h1>Debug: {topic.name}</h1>"
-    html += f"<p>ID: {topic.id}</p>"
-    html += f"<p>Code Examples: {topic.code_examples[:200] if topic.code_examples else 'EMPTY'}</p>"
-    html += f"<p>Videos: {topic.videos or 'EMPTY'}</p>"
-    html += f"<p>Images: {topic.images or 'EMPTY'}</p>"
-    html += f"<p>Documents: {len(topic.documents)}</p>"
-    html += f"<p><a href='/edit_topic/{topic.id}'>Edit</a> | <a href='/topic/{topic.id}'>View</a></p>"
-    return html
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
