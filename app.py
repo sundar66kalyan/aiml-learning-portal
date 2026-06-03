@@ -9,7 +9,7 @@ import tempfile
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-this'
+app.config['SECRET_KEY'] = 'AIzaSyC0NqbJiX8_PaBZ1BoJ2u9hHTcA6mEgmmk'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learning_portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
