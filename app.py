@@ -484,3 +484,45 @@ def download_from_drive():
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
+@app.route('/process_google_drive', methods=['POST'])
+@admin_required
+def process_google_drive():
+    try:
+        import requests
+        data = request.json
+        file_id = data.get('file_id')
+        file_name = data.get('file_name')
+        access_token = data.get('access_token')
+        
+        if not file_id or not access_token:
+            return {'success': False, 'error': 'Missing file ID or token'}
+        
+        # Download file from Google Drive
+        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        response = requests.get(download_url, headers=headers, stream=True)
+        
+        if response.status_code == 200:
+            # Save file
+            filename = secure_filename(file_name)
+            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            file_size = os.path.getsize(filepath)
+            
+            return {
+                'success': True, 
+                'filename': filename,
+                'filepath': unique_filename,
+                'size': file_size
+            }
+        else:
+            return {'success': False, 'error': f'Download failed: HTTP {response.status_code}'}
+            
+    except Exception as e:
+        return {'success': False, 'error': str(e)}

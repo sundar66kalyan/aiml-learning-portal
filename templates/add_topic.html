@@ -2,76 +2,338 @@
 {% block content %}
 <div class="container">
     <div class="card">
-        <div class="card-header bg-success text-white">
-            <h2>Add New Topic to: {{ category.name }}</h2>
+        <div class="card-header bg-warning">
+            <h2>✏️ Edit Topic: {{ topic.name }}</h2>
         </div>
         <div class="card-body">
-            <!-- CRITICAL: enctype must be here for file uploads -->
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="editTopicForm">
                 <div class="mb-3">
-                    <label class="form-label">Topic Name *</label>
-                    <input type="text" name="name" class="form-control" required>
+                    <label class="form-label fw-bold">Topic Name</label>
+                    <input type="text" name="name" class="form-control" value="{{ topic.name }}" required>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Difficulty Level</label>
+                    <label class="form-label fw-bold">Difficulty Level</label>
                     <select name="difficulty" class="form-select">
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
+                        <option value="Beginner" {% if topic.difficulty == 'Beginner' %}selected{% endif %}>🌱 Beginner</option>
+                        <option value="Intermediate" {% if topic.difficulty == 'Intermediate' %}selected{% endif %}>📘 Intermediate</option>
+                        <option value="Advanced" {% if topic.difficulty == 'Advanced' %}selected{% endif %}>🚀 Advanced</option>
                     </select>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Definition</label>
-                    <textarea name="definition" class="form-control" rows="5"></textarea>
+                    <label class="form-label fw-bold">Definition</label>
+                    <textarea name="definition" class="form-control" rows="5">{{ topic.definition or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Theory Notes</label>
-                    <textarea name="theory_notes" class="form-control" rows="8"></textarea>
+                    <label class="form-label fw-bold">Theory Notes</label>
+                    <textarea name="theory_notes" class="form-control" rows="10">{{ topic.theory_notes or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Code Examples</label>
-                    <textarea name="code_examples" class="form-control" rows="8"></textarea>
+                    <label class="form-label fw-bold">Code Examples</label>
+                    <textarea name="code_examples" id="codeInput" class="form-control font-monospace" rows="8">{{ topic.code_examples or '' }}</textarea>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-success btn-sm" onclick="runCode()">▶️ Run Code</button>
+                        <button type="button" class="btn btn-info btn-sm" onclick="copyCode()">📋 Copy Code</button>
+                    </div>
+                    <div id="outputArea" class="mt-2" style="display:none;">
+                        <div class="card">
+                            <div class="card-header bg-dark text-white">Output:</div>
+                            <div class="card-body">
+                                <pre id="outputContent" style="margin:0; white-space:pre-wrap;"></pre>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Videos (YouTube URLs)</label>
-                    <textarea name="videos" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">🎥 Videos (One per line)</label>
+                    <textarea name="videos" class="form-control" rows="3">{{ topic.videos or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Images (URLs)</label>
-                    <textarea name="images" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">🖼️ Images (One URL per line)</label>
+                    <textarea name="images" id="imageUrls" class="form-control" rows="3">{{ topic.images or '' }}</textarea>
+                    <button type="button" class="btn btn-primary btn-sm mt-2" onclick="previewImages()">👁️ Preview Images</button>
+                    <div id="imagePreview" class="row mt-2"></div>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">GitHub Links</label>
-                    <textarea name="github_links" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">📦 GitHub Links (One per line)</label>
+                    <textarea name="github_links" class="form-control" rows="3">{{ topic.github_links or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Project Links</label>
-                    <textarea name="project_links" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">🔗 Project Links (One per line)</label>
+                    <textarea name="project_links" class="form-control" rows="3">{{ topic.project_links or '' }}</textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">References</label>
-                    <textarea name="references" class="form-control" rows="3"></textarea>
+                    <label class="form-label fw-bold">📚 References (One per line)</label>
+                    <textarea name="references" class="form-control" rows="3">{{ topic.references or '' }}</textarea>
                 </div>
                 
+                <!-- Document Upload Section with Google Drive Integration -->
                 <div class="mb-3">
-                    <label class="form-label">Upload Documents (PDF, DOC, etc.)</label>
-                    <input type="file" name="documents" class="form-control" multiple>
-                    <small class="text-muted">Max 50MB per file</small>
+                    <label class="form-label fw-bold">📄 Upload Documents</label>
+                    
+                    <!-- Regular File Upload -->
+                    <div class="mb-2">
+                        <input type="file" name="documents" id="fileInput" class="form-control" multiple 
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.ipynb,.py,.jpg,.jpeg,.png">
+                        <small class="text-muted">Max file size: 50MB per file</small>
+                        <div id="fileWarning" class="alert alert-warning mt-2" style="display:none;"></div>
+                        <div id="fileList" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- Google Drive Integration -->
+                    <div class="card mt-3 border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">☁️ Google Drive Integration</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="googleDriveStatus">
+                                <button type="button" class="btn btn-danger" onclick="authenticateGoogleDrive()">
+                                    🔐 Sign in with Google
+                                </button>
+                                <button type="button" class="btn btn-primary" id="drivePickerBtn" style="display:none;" onclick="showGoogleDrivePicker()">
+                                    📁 Select Files from Google Drive
+                                </button>
+                            </div>
+                            <div id="driveFilesList" class="mt-3"></div>
+                        </div>
+                    </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary">Save Topic</button>
-                <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">Cancel</a>
+                <!-- Existing Documents -->
+                {% if topic.documents %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">📎 Existing Documents</label>
+                    <div class="list-group">
+                        {% for doc in topic.documents %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary me-2">{{ doc.file_type|upper }}</span>
+                                {{ doc.filename }}
+                                <small class="text-muted">({{ (doc.file_size / 1024)|round(1) }} KB)</small>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-sm btn-success">⬇️ Download</a>
+                                <a href="{{ url_for('delete_document', doc_id=doc.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this document?')">🗑️ Delete</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" onclick="return validateFiles()">💾 Update Topic</button>
+                    <a href="{{ url_for('view_topic', topic_id=topic.id) }}" class="btn btn-secondary">❌ Cancel</a>
+                </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+// File validation
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const ALLOWED_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py', 'jpg', 'jpeg', 'png'];
+
+function validateFiles() {
+    const fileInput = document.getElementById('fileInput');
+    const files = fileInput.files;
+    const warnings = [];
+    let hasError = false;
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        
+        if (file.size > MAX_FILE_SIZE) {
+            warnings.push(`${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds 50MB limit`);
+            hasError = true;
+        }
+        
+        if (!ALLOWED_TYPES.includes(fileExt)) {
+            warnings.push(`${file.name}: Unsupported file type (.${fileExt})`);
+            hasError = true;
+        }
+    }
+    
+    if (hasError) {
+        const warningDiv = document.getElementById('fileWarning');
+        warningDiv.innerHTML = '<strong>⚠️ Warning:</strong><br>' + warnings.join('<br>');
+        warningDiv.style.display = 'block';
+        return false;
+    }
+    
+    return true;
+}
+
+// Display selected files
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const fileList = document.getElementById('fileList');
+    const files = e.target.files;
+    
+    if (files.length === 0) {
+        fileList.innerHTML = '';
+        return;
+    }
+    
+    fileList.innerHTML = '<strong>📁 Selected files:</strong><ul>';
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        let sizeClass = file.size > MAX_FILE_SIZE ? 'text-danger' : 'text-success';
+        fileList.innerHTML += `<li class="${sizeClass}">📎 ${file.name} (${sizeMB} MB)</li>`;
+    }
+    fileList.innerHTML += '</ul>';
+});
+
+// Google Drive Integration
+let googleAuthToken = null;
+let googlePickerInitialized = false;
+
+// Google API Configuration - Replace with your credentials
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+
+function authenticateGoogleDrive() {
+    // Load Google API
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => {
+        gapi.load('client:auth2', () => {
+            gapi.client.init({
+                apiKey: GOOGLE_API_KEY,
+                clientId: GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/drive.readonly'
+            }).then(() => {
+                const auth = gapi.auth2.getAuthInstance();
+                auth.signIn().then(() => {
+                    googleAuthToken = auth.currentUser.get().getAuthResponse().access_token;
+                    document.getElementById('drivePickerBtn').style.display = 'inline-block';
+                    document.getElementById('googleDriveStatus').innerHTML = '<div class="alert alert-success">✅ Signed in to Google! You can now select files.</div>';
+                    
+                    // Load Picker API
+                    gapi.load('picker', () => {
+                        googlePickerInitialized = true;
+                    });
+                }).catch(error => {
+                    document.getElementById('googleDriveStatus').innerHTML = `<div class="alert alert-danger">❌ Sign in failed: ${error}</div>`;
+                });
+            });
+        });
+    };
+    document.head.appendChild(script);
+}
+
+function showGoogleDrivePicker() {
+    if (!googlePickerInitialized) {
+        alert('Please wait for Google API to load...');
+        return;
+    }
+    
+    const view = new google.picker.View(google.picker.ViewId.DOCS);
+    view.setMimeTypes('application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain,application/zip');
+    
+    const picker = new google.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(googleAuthToken)
+        .setDeveloperKey(GOOGLE_API_KEY)
+        .setCallback(pickerCallback)
+        .build();
+    picker.setVisible(true);
+}
+
+function pickerCallback(data) {
+    if (data.action === google.picker.Action.PICKED) {
+        const file = data.docs[0];
+        const driveFilesDiv = document.getElementById('driveFilesList');
+        
+        // Create hidden input for this file
+        const fileId = file.id;
+        const fileName = file.name;
+        
+        driveFilesDiv.innerHTML += `
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>✅ Selected from Google Drive:</strong> ${fileName}
+                    <br><small>File will be downloaded and added to this topic</small>
+                </div>
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            </div>
+            <input type="hidden" name="google_drive_files" value='${JSON.stringify({id: fileId, name: fileName})}'>
+        `;
+    }
+}
+
+// Code execution functions
+function runCode() {
+    const code = document.getElementById('codeInput').value;
+    const outputDiv = document.getElementById('outputArea');
+    const outputContent = document.getElementById('outputContent');
+    
+    if (!code.trim()) {
+        alert('Please enter some code first');
+        return;
+    }
+    
+    outputDiv.style.display = 'block';
+    outputContent.textContent = '🏃 Running code...\n';
+    
+    fetch('/run_code', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code: code})
+    })
+    .then(response => response.json())
+    .then(data => {
+        outputContent.textContent = data.output || '✅ Code executed successfully!';
+    })
+    .catch(error => {
+        outputContent.textContent = '❌ Error: ' + error;
+    });
+}
+
+function copyCode() {
+    const code = document.getElementById('codeInput');
+    code.select();
+    document.execCommand('copy');
+    alert('📋 Code copied to clipboard!');
+}
+
+function previewImages() {
+    const urls = document.getElementById('imageUrls').value.split('\n');
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    urls.forEach(url => {
+        if(url.trim()) {
+            const col = document.createElement('div');
+            col.className = 'col-md-3 mb-2';
+            col.innerHTML = `
+                <div class="card">
+                    <img src="${url.trim()}" class="card-img-top" style="height:150px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/150?text=Invalid+URL'">
+                    <div class="card-body p-1">
+                        <a href="${url.trim()}" target="_blank" class="btn btn-sm btn-primary w-100">View Full</a>
+                        <a href="${url.trim()}" download class="btn btn-sm btn-secondary w-100 mt-1">Download</a>
+                    </div>
+                </div>
+            `;
+            preview.appendChild(col);
+        }
+    });
+}
+
+// Auto preview images on load
+if(document.getElementById('imageUrls').value) {
+    previewImages();
+}
+</script>
 {% endblock %}
