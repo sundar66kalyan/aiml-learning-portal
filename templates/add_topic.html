@@ -3,149 +3,75 @@
 <div class="container">
     <div class="card">
         <div class="card-header bg-success text-white">
-            <h2>➕ Add New Topic to: {{ category.name }}</h2>
+            <h2>Add New Topic to: {{ category.name }}</h2>
         </div>
         <div class="card-body">
+            <!-- CRITICAL: enctype must be here for file uploads -->
             <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Topic Name *</label>
+                    <label class="form-label">Topic Name *</label>
                     <input type="text" name="name" class="form-control" required>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Difficulty Level</label>
+                    <label class="form-label">Difficulty Level</label>
                     <select name="difficulty" class="form-select">
-                        <option value="Beginner">🌱 Beginner</option>
-                        <option value="Intermediate">📘 Intermediate</option>
-                        <option value="Advanced">🚀 Advanced</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
                     </select>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Definition</label>
+                    <label class="form-label">Definition</label>
                     <textarea name="definition" class="form-control" rows="5"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Theory Notes</label>
-                    <textarea name="theory_notes" class="form-control" rows="10"></textarea>
+                    <label class="form-label">Theory Notes</label>
+                    <textarea name="theory_notes" class="form-control" rows="8"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Code Examples</label>
-                    <textarea name="code_examples" id="codeInput" class="form-control font-monospace" rows="8"></textarea>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-success btn-sm" onclick="runCode()">▶️ Run Code</button>
-                        <button type="button" class="btn btn-info btn-sm" onclick="copyCode()">📋 Copy Code</button>
-                    </div>
-                    <div id="outputArea" class="mt-2" style="display:none;">
-                        <div class="card">
-                            <div class="card-header bg-dark text-white">Output:</div>
-                            <div class="card-body">
-                                <pre id="outputContent" style="margin:0; white-space:pre-wrap;"></pre>
-                            </div>
-                        </div>
-                    </div>
+                    <label class="form-label">Code Examples</label>
+                    <textarea name="code_examples" class="form-control" rows="8"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🎥 Videos (One per line)</label>
-                    <textarea name="videos" class="form-control" rows="3" placeholder="https://youtube.com/watch?v=..."></textarea>
+                    <label class="form-label">Videos (YouTube URLs)</label>
+                    <textarea name="videos" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🖼️ Images (One URL per line)</label>
-                    <textarea name="images" id="imageUrls" class="form-control" rows="3"></textarea>
-                    <button type="button" class="btn btn-primary btn-sm mt-2" onclick="previewImages()">👁️ Preview Images</button>
-                    <div id="imagePreview" class="row mt-2"></div>
+                    <label class="form-label">Images (URLs)</label>
+                    <textarea name="images" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">📦 GitHub Links (One per line)</label>
-                    <textarea name="github_links" class="form-control" rows="3" placeholder="https://github.com/user/repo"></textarea>
+                    <label class="form-label">GitHub Links</label>
+                    <textarea name="github_links" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">🔗 Project Links (One per line)</label>
+                    <label class="form-label">Project Links</label>
                     <textarea name="project_links" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">📚 References (One per line)</label>
+                    <label class="form-label">References</label>
                     <textarea name="references" class="form-control" rows="3"></textarea>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">📄 Upload Documents</label>
-                    <input type="file" name="documents" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.ipynb,.py">
-                    <small class="text-muted">Upload PDF, Word, Excel, CSV, ZIP, or code files</small>
+                    <label class="form-label">Upload Documents (PDF, DOC, etc.)</label>
+                    <input type="file" name="documents" class="form-control" multiple>
+                    <small class="text-muted">Max 50MB per file</small>
                 </div>
                 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">💾 Save Topic</button>
-                    <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">❌ Cancel</a>
-                </div>
+                <button type="submit" class="btn btn-primary">Save Topic</button>
+                <a href="{{ url_for('view_category', category_id=category.id) }}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-function runCode() {
-    const code = document.getElementById('codeInput').value;
-    const outputDiv = document.getElementById('outputArea');
-    const outputContent = document.getElementById('outputContent');
-    
-    if (!code.trim()) {
-        alert('Please enter some code first');
-        return;
-    }
-    
-    outputDiv.style.display = 'block';
-    outputContent.textContent = 'Running...';
-    
-    fetch('/run_code', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({code: code})
-    })
-    .then(response => response.json())
-    .then(data => {
-        outputContent.textContent = data.output || '(No output)';
-    })
-    .catch(error => {
-        outputContent.textContent = 'Error: ' + error;
-    });
-}
-
-function copyCode() {
-    const code = document.getElementById('codeInput');
-    code.select();
-    document.execCommand('copy');
-    alert('Code copied to clipboard!');
-}
-
-function previewImages() {
-    const urls = document.getElementById('imageUrls').value.split('\n');
-    const preview = document.getElementById('imagePreview');
-    preview.innerHTML = '';
-    
-    urls.forEach(url => {
-        if(url.trim()) {
-            const col = document.createElement('div');
-            col.className = 'col-md-3 mb-2';
-            col.innerHTML = `
-                <div class="card">
-                    <img src="${url.trim()}" class="card-img-top" style="height:150px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/150?text=Invalid+URL'">
-                    <div class="card-body p-1">
-                        <a href="${url.trim()}" target="_blank" class="btn btn-sm btn-primary w-100">View</a>
-                        <a href="${url.trim()}" download class="btn btn-sm btn-secondary w-100 mt-1">Download</a>
-                    </div>
-                </div>
-            `;
-            preview.appendChild(col);
-        }
-    });
-}
-</script>
 {% endblock %}

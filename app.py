@@ -426,3 +426,61 @@ def debug_topic(topic_id):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
+import requests
+
+@app.route('/download_from_drive', methods=['POST'])
+@admin_required
+def download_from_drive():
+    try:
+        file_data = request.json
+        file_id = file_data.get('file_id')
+        file_name = file_data.get('file_name')
+        
+        # Download from Google Drive
+        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+        headers = {'Authorization': f'Bearer {file_data.get("token")}'}
+        
+        response = requests.get(download_url, headers=headers)
+        
+        if response.status_code == 200:
+            # Save the file
+            filename = secure_filename(file_name)
+            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            
+            return {'success': True, 'filename': filename, 'filepath': unique_filename}
+        else:
+            return {'success': False, 'error': 'Download failed'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@app.route('/download_from_drive', methods=['POST'])
+@admin_required
+def download_from_drive():
+    try:
+        file_data = request.json
+        file_id = file_data.get('file_id')
+        file_name = file_data.get('file_name')
+        
+        download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+        headers = {'Authorization': f'Bearer {file_data.get("token")}'}
+        
+        response = requests.get(download_url, headers=headers)
+        
+        if response.status_code == 200:
+            filename = secure_filename(file_name)
+            unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            
+            return {'success': True, 'filename': filename, 'filepath': unique_filename}
+        else:
+            return {'success': False, 'error': 'Download failed'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
