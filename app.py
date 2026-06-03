@@ -1,9 +1,4 @@
-﻿# Backup current app.py
-Copy-Item app.py app.py.backup
-
-# Create clean app.py (keep only what's needed)
-@'
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify
+﻿from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Category, Topic, Document
 from datetime import datetime
@@ -11,7 +6,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import requests
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -19,9 +13,8 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///learning_portal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Upload configuration
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py', 'jpg', 'jpeg', 'png', 'gif'}
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip', 'ipynb', 'py', 'jpg', 'jpeg', 'png'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
@@ -64,7 +57,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ========== BASIC ROUTES ==========
 @app.route('/')
 def index():
     categories = Category.query.all()
@@ -295,7 +287,6 @@ def run_code():
     except Exception as e:
         return {'output': f'Error: {str(e)}'}
 
-# ========== DOCUMENT MANAGEMENT (ONLY ONE VERSION) ==========
 @app.route('/download/<int:doc_id>')
 @login_required
 def download_document(doc_id):
@@ -318,7 +309,6 @@ def delete_document(doc_id):
     flash('Document deleted', 'success')
     return redirect(request.referrer)
 
-# ========== USER MANAGEMENT ==========
 @app.route('/admin/users')
 @admin_required
 def manage_users():
@@ -369,8 +359,18 @@ def search():
         ).all()
     return render_template('search.html', query=query, topics=topics)
 
+@app.route('/debug_topic/<int:topic_id>')
+@admin_required
+def debug_topic(topic_id):
+    topic = Topic.query.get_or_404(topic_id)
+    html = f"<h1>Debug: {topic.name}</h1>"
+    html += f"<p>ID: {topic.id}</p>"
+    html += f"<p>Code Examples: {topic.code_examples[:200] if topic.code_examples else 'EMPTY'}</p>"
+    html += f"<p>Videos: {topic.videos or 'EMPTY'}</p>"
+    html += f"<p>Images: {topic.images or 'EMPTY'}</p>"
+    html += f"<p>Documents: {len(topic.documents)}</p>"
+    html += f"<p><a href='/edit_topic/{topic.id}'>Edit</a> | <a href='/topic/{topic.id}'>View</a></p>"
+    return html
+
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=10000)
-'@ | Out-File -FilePath app.py -Encoding UTF8
-
-Write-Host "✅ Clean app.py created with no duplicate routes!" -ForegroundColor Green
