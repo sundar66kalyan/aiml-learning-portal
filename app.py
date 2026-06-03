@@ -279,10 +279,7 @@ def run_code():
         
         output = result.stdout
         if result.stderr:
-            output += '
-
-Errors:
-' + result.stderr
+            output += '\n\nErrors:\n' + result.stderr
         
         return {'output': output}
     except subprocess.TimeoutExpired:
